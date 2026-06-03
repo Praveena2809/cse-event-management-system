@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Small app-wide improvements */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100;
+}

@@ -1,0 +1,211 @@
+import crypto from "crypto";
+import { validationResult } from "express-validator";
+import { User } from "../models/User.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { signToken } from "../utils/token.js";
+import { sendEmail } from "../utils/email.js";
+
+const buildClientUrl = (path = "/") => {
+  const base = process.env.CLIENT_URL || "http://localhost:5173";
+  return `${base}${path}`;
+};
+
+const okUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  phone: user.phone,
+  registerNumber: user.registerNumber,
+  year: user.year,
+  department: user.department,
+  collegeName: user.collegeName,
+  isEmailVerified: user.isEmailVerified,
+});
+
+export const registerParticipant = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400);
+    throw new Error(errors.array()[0].msg);
+  }
+
+  const { name, email, password, registerNumber, year, department, phone, collegeName } = req.body;
+
+  const exists = await User.findOne({ email });
+  if (exists) {
+    res.status(400);
+    throw new Error("Email already registered");
+  }
+
+  const emailVerificationToken = crypto.randomBytes(20).toString("hex");
+  const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  const user = await User.create({
+    name,
+    email,
+    password,
+    role: "participant",
+    registerNumber,
+    year,
+    department,
+    phone,
+    collegeName,
+    emailVerificationToken,
+    emailVerificationExpires,
+  });
+
+  // Send verification email (non-blocking for beginners: if email not configured, app still works)
+  try {
+    const verifyUrl = buildClientUrl(`/verify-email?token=${emailVerificationToken}`);
+    await sendEmail({
+      to: user.email,
+      subject: "Verify your email - CSE Event System",
+      html: `<p>Hello ${user.name},</p><p>Please verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+    });
+  } catch (e) {
+    // Ignore email errors in dev to keep onboarding smooth
+  }
+
+  const token = signToken({ id: user._id, role: user.role });
+  res.status(201).json({ user: okUser(user), token });
+});
+
+export const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400);
+    throw new Error("Email and password are required");
+  }
+
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    res.status(401);
+    throw new Error("Invalid credentials");
+  }
+
+  const match = await user.matchPassword(password);
+  if (!match) {
+    res.status(401);
+    throw new Error("Invalid credentials");
+  }
+
+  const token = signToken({ id: user._id, role: user.role });
+  res.json({ user: okUser(user), token });
+});
+
+export const me = asyncHandler(async (req, res) => {
+  res.json({ user: okUser(req.user) });
+});
+
+export const updateMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select("-password");
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  const allowed = ["name", "phone", "year", "department", "collegeName"];
+  for (const k of allowed) {
+    if (req.body[k] !== undefined) user[k] = req.body[k];
+  }
+  await user.save();
+  res.json({ user: okUser(user) });
+});
+
+export const resendVerification = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  if (user.isEmailVerified) return res.json({ message: "Already verified" });
+
+  user.emailVerificationToken = crypto.randomBytes(20).toString("hex");
+  user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await user.save();
+
+  const verifyUrl = buildClientUrl(`/verify-email?token=${user.emailVerificationToken}`);
+  await sendEmail({
+    to: user.email,
+    subject: "Verify your email - CSE Event System",
+    html: `<p>Hello ${user.name},</p><p>Please verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+  });
+
+  res.json({ message: "Verification email sent" });
+});
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    res.status(400);
+    throw new Error("Token missing");
+  }
+
+  const user = await User.findOne({
+    emailVerificationToken: token,
+    emailVerificationExpires: { $gt: new Date() },
+  });
+  if (!user) {
+    res.status(400);
+    throw new Error("Invalid/expired verification token");
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save();
+
+  res.json({ message: "Email verified successfully" });
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400);
+    throw new Error("Email required");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) return res.json({ message: "If that email exists, we sent a reset link" });
+
+  const resetToken = crypto.randomBytes(20).toString("hex");
+  user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
+  await user.save();
+
+  const resetUrl = buildClientUrl(`/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`);
+  await sendEmail({
+    to: user.email,
+    subject: "Reset password - CSE Event System",
+    html: `<p>Reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+  });
+
+  res.json({ message: "Reset link sent" });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, email, password } = req.body;
+  if (!token || !email || !password) {
+    res.status(400);
+    throw new Error("token, email and new password are required");
+  }
+
+  const hashed = crypto.createHash("sha256").update(token).digest("hex");
+  const user = await User.findOne({
+    email,
+    resetPasswordToken: hashed,
+    resetPasswordExpires: { $gt: new Date() },
+  }).select("+password");
+  if (!user) {
+    res.status(400);
+    throw new Error("Invalid/expired reset token");
+  }
+
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+
+  res.json({ message: "Password reset successful" });
+});
