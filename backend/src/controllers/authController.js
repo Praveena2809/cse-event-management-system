@@ -72,7 +72,8 @@ export const registerParticipant = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  //const { email, password } = req.body;
+  const { email, password, role } = req.body;
   if (!email || !password) {
     res.status(400);
     throw new Error("Email and password are required");
@@ -89,7 +90,10 @@ export const login = asyncHandler(async (req, res) => {
     res.status(401);
     throw new Error("Invalid credentials");
   }
-
+  if (role && user.role !== role) {
+    res.status(403);
+    throw new Error(`This login page is only for ${role}s`);
+  }
   const token = signToken({ id: user._id, role: user.role });
   res.json({ user: okUser(user), token });
 });

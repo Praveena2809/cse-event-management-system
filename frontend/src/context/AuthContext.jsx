@@ -30,13 +30,23 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
+  // const login = async (email, password) => {
+  //   const { data } = await api.post("/auth/login", { email, password });
+  //   localStorage.setItem("token", data.token);
+  //   setUser(data.user);
+  //   return data.user;
+  // };
+  const login = async (email, password, expectedRole) => {
+    const { data } = await api.post("/auth/login", {
+      email,
+      password,
+      role: expectedRole,
+    });
+  
     localStorage.setItem("token", data.token);
     setUser(data.user);
     return data.user;
   };
-
   // const register = async (payload) => {
   //   const { data } = await api.post("/auth/register", payload);
   //   localStorage.setItem("token", data.token);

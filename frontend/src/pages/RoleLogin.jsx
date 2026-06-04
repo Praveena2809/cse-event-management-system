@@ -21,7 +21,8 @@ export default function RoleLogin({ role, title, sampleEmail }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const user = await login(email, password);
+      //const user = await login(email, password);
+      const user = await login(email, password, role);
       if (user.role !== role) {
         logout();
         toast.error(`This login page is for "${role}". Your account role is "${user.role}".`);
