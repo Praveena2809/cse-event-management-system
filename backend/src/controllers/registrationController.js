@@ -376,7 +376,25 @@ export const registerForSubevent =
         "Registrations are allowed only for approved subevents"
       );
     }
+//
+// NEW: block cancelled / unapproved events
+//
+const event =
+  await Event.findById(
+    subevent.event
+  );
 
+if (
+  !event ||
+  event.status !==
+    "approved"
+) {
+  res.status(400);
+
+  throw new Error(
+    "Registrations unavailable for this event"
+  );
+}
     // prevent duplicate registration
     const existing =
       await Registration.findOne(

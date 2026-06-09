@@ -77,6 +77,85 @@ const closeAttendance =
       );
     }
   };
+  const requestCancel =
+  async (eventId) => {
+    const reason = prompt(
+      "Reason for cancellation?"
+    );
+
+    if (!reason) return;
+
+    try {
+      const { data } =
+        await api.patch(
+          `/events/${eventId}/request-cancel`,
+          { reason }
+        );
+
+      toast.success(
+        data.message
+      );
+
+      load();
+    } catch (err) {
+      toast.error(
+        err?.response?.data
+          ?.message ||
+          "Failed to request cancellation"
+      );
+    }
+  };
+  const requestReschedule =
+  async (event) => {
+    const newDate =
+      prompt(
+        "Enter new date (YYYY-MM-DD)"
+      );
+
+    if (!newDate) return;
+
+    const newTime =
+      prompt(
+        "Enter new time"
+      );
+
+    const newVenue =
+      prompt(
+        "Enter new venue"
+      );
+
+    const reason =
+      prompt(
+        "Reason for rescheduling?"
+      );
+
+    if (!reason) return;
+
+    try {
+      const { data } =
+        await api.patch(
+          `/events/${event._id}/request-reschedule`,
+          {
+            newDate,
+            newTime,
+            newVenue,
+            reason,
+          }
+        );
+
+      toast.success(
+        data.message
+      );
+
+      load();
+    } catch (err) {
+      toast.error(
+        err?.response?.data
+          ?.message ||
+          "Failed to request reschedule"
+      );
+    }
+  };
   useEffect(() => {
     load();
   }, []);
@@ -238,29 +317,32 @@ const closeAttendance =
       key={e._id}
       className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
     >
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="font-semibold text-slate-900 dark:text-white">
-            {e.name}
-          </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            {e.description}
-          </p>
+{/* Left Side */}
+<div>
+  <p className="font-semibold text-slate-900 dark:text-white">
+    {e.name}
+  </p>
 
-          <p className="mt-2 text-xs text-slate-500">
-            Status:
-            <span className="ml-1 font-semibold">
-              {e.status}
-            </span>
+  <p className="text-sm text-slate-600 dark:text-slate-300">
+    {e.description}
+  </p>
 
-            {e.rejectionReason
-              ? ` • Reason: ${e.rejectionReason}`
-              : ""}
-          </p>
-          <div className="mt-2">
+  <p className="mt-2 text-xs text-slate-500">
+    Status:
+    <span className="ml-1 font-semibold">
+      {e.status}
+    </span>
+
+    {e.rejectionReason
+      ? ` • Reason: ${e.rejectionReason}`
+      : ""}
+  </p>
+
+  <div className="mt-3">
   <span
-    className={`rounded px-2 py-1 text-xs text-white ${
+    className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-medium text-white whitespace-nowrap ${
       e.attendanceEnabled
         ? "bg-green-600"
         : "bg-red-600"
@@ -271,66 +353,99 @@ const closeAttendance =
       : "Attendance Closed"}
   </span>
 </div>
-        </div>
-
-        {/* <button
-          onClick={() =>
-            setCreatingFor(e._id)
-          }
-          className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        >
-          Add Subevent
-        </button> */}
-        <div className="flex flex-wrap gap-2">
-  <button
-    onClick={() =>
-      setCreatingFor(
-        e._id
-      )
-    }
-    className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-  >
-    Add Subevent
-  </button>
-
-  <button
-    onClick={() =>
-      openAttendance(
-        e._id
-      )
-    }
-    disabled={
-      e.attendanceEnabled
-    }
-    className="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-  >
-    Open Attendance
-  </button>
-
-  <button
-    onClick={() =>
-      closeAttendance(
-        e._id
-      )
-    }
-    disabled={
-      !e.attendanceEnabled
-    }
-    className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-  >
-    Close Attendance
-  </button>
-  {/* <button
-  onClick={() =>
-    navigate(
-      `/coordinator/feedbacks/${e._id}`
-    )
-  }
-  className="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
->
-  View Feedback
-</button> */}
 </div>
+
+{/* Right Side Buttons */}
+<div className="flex flex-wrap justify-start gap-3 md:justify-end">
+
+  {e.status ===
+    "approved" && (
+    <>
+      <button
+        onClick={() =>
+          setCreatingFor(
+            e._id
+          )
+        }
+        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+      >
+        Add Subevent
+      </button>
+
+      <button
+        onClick={() =>
+          openAttendance(
+            e._id
+          )
+        }
+        disabled={
+          e.attendanceEnabled
+        }
+        className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+      >
+        Open Attendance
+      </button>
+
+      <button
+        onClick={() =>
+          closeAttendance(
+            e._id
+          )
+        }
+        disabled={
+          !e.attendanceEnabled
+        }
+        className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+      >
+        Close Attendance
+      </button>
+
+      <button
+        onClick={() =>
+          requestCancel(
+            e._id
+          )
+        }
+        className="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
+      >
+        Request Cancel
+      </button>
+
+      <button
+        onClick={() =>
+          requestReschedule(
+            e
+          )
+        }
+        className="rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700"
+      >
+        Request Reschedule
+      </button>
+    </>
+  )}
+
+  {e.status ===
+    "cancel_requested" && (
+    <div className="rounded-md bg-orange-100 px-4 py-2 text-sm font-medium text-orange-700">
+      Cancellation Request Sent to HOD
+    </div>
+  )}
+
+  {e.status ===
+    "reschedule_requested" && (
+    <div className="rounded-md bg-yellow-100 px-4 py-2 text-sm font-medium text-yellow-700">
+      Reschedule Request Sent to HOD
+    </div>
+  )}
+
+  {e.status ===
+    "cancelled" && (
+    <div className="rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-700">
+      Event Cancelled
+    </div>
+  )}
+</div>
+
       </div>
 
       {/* Subevents */}

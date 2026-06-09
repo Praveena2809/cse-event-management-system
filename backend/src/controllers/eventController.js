@@ -244,13 +244,48 @@ export const createSubevent = asyncHandler(async (req, res) => {
 });
 
 // HOD approvals
-export const listPendingApprovals = asyncHandler(async (req, res) => {
-  const events = await Event.find({ status: "pending" }).populate("createdBy", "name email");
-  const subevents = await Subevent.find({ status: "pending" })
-    .populate("event", "name")
-    .populate("createdBy", "name email");
-  res.json({ events, subevents });
-});
+export const listPendingApprovals =
+  asyncHandler(async (req, res) => {
+
+    const events =
+      await Event.find({
+        status: {
+          $in: [
+            "pending",
+            "cancel_requested",
+            "reschedule_requested",
+          ],
+        },
+      })
+        .populate(
+          "createdBy",
+          "name email"
+        )
+        .sort({
+          createdAt: -1,
+        });
+
+    const subevents =
+      await Subevent.find({
+        status: "pending",
+      })
+        .populate(
+          "event",
+          "name"
+        )
+        .populate(
+          "createdBy",
+          "name email"
+        )
+        .sort({
+          createdAt: -1,
+        });
+
+    res.json({
+      events,
+      subevents,
+    });
+  });
 
 export const approveEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);
@@ -285,6 +320,269 @@ export const rejectEvent = asyncHandler(async (req, res) => {
   res.json({ event });
 });
 
+export const requestCancellation =
+  asyncHandler(async (req, res) => {
+    const { reason } = req.body;
+
+    if (!reason?.trim()) {
+      res.status(400);
+      throw new Error(
+        "Cancellation reason is required"
+      );
+    }
+
+    const event =
+      await Event.findById(
+        req.params.id
+      );
+
+    if (!event) {
+      res.status(404);
+      throw new Error(
+        "Event not found"
+      );
+    }
+
+    // only creator coordinator
+    if (
+      String(event.createdBy) !==
+      String(req.user._id)
+    ) {
+      res.status(403);
+      throw new Error(
+        "Unauthorized"
+      );
+    }
+
+    // only approved events
+    if (
+      event.status !==
+      "approved"
+    ) {
+      res.status(400);
+      throw new Error(
+        "Only approved events can be cancelled"
+      );
+    }
+
+    event.status =
+      "cancel_requested";
+
+    event.cancelReason =
+      reason;
+
+    await event.save();
+
+    res.json({
+      message:
+        "Cancellation request sent to HOD",
+      event,
+    });
+  });
+  export const approveCancellation =
+  asyncHandler(async (req, res) => {
+    const event =
+      await Event.findById(
+        req.params.id
+      );
+
+    if (!event) {
+      res.status(404);
+      throw new Error(
+        "Event not found"
+      );
+    }
+
+    if (
+      event.status !==
+      "cancel_requested"
+    ) {
+      res.status(400);
+      throw new Error(
+        "No cancellation request found"
+      );
+    }
+
+    event.status =
+      "cancelled";
+
+    event.approvedBy =
+      req.user._id;
+
+    event.approvedAt =
+      new Date();
+
+    await event.save();
+
+    res.json({
+      message:
+        "Event cancelled successfully",
+      event,
+    });
+  });
+  export const requestReschedule =
+  asyncHandler(async (req, res) => {
+    const {
+      newDate,
+      newVenue,
+      newTime,
+      reason,
+    } = req.body;
+
+    if (
+      !newDate ||
+      !reason
+    ) {
+      res.status(400);
+      throw new Error(
+        "New date and reason are required"
+      );
+    }
+
+    const event =
+      await Event.findById(
+        req.params.id
+      );
+
+    if (!event) {
+      res.status(404);
+      throw new Error(
+        "Event not found"
+      );
+    }
+
+    // only creator coordinator
+    if (
+      String(event.createdBy) !==
+      String(req.user._id)
+    ) {
+      res.status(403);
+      throw new Error(
+        "Unauthorized"
+      );
+    }
+
+    // only approved events
+    if (
+      event.status !==
+      "approved"
+    ) {
+      res.status(400);
+      throw new Error(
+        "Only approved events can be rescheduled"
+      );
+    }
+
+    event.status =
+      "reschedule_requested";
+
+    event.rescheduleRequest = {
+      requested: true,
+
+      oldDate:
+        event.date,
+
+      newDate:
+        new Date(
+          newDate
+        ),
+
+      oldVenue:
+        event.venue,
+
+      newVenue:
+        newVenue || "",
+
+      oldTime:
+        event.time,
+
+      newTime:
+        newTime || "",
+
+      reason,
+
+      requestedAt:
+        new Date(),
+    };
+
+    await event.save();
+
+    res.json({
+      message:
+        "Reschedule request sent to HOD",
+      event,
+    });
+  });
+  export const approveReschedule =
+  asyncHandler(async (req, res) => {
+    const event =
+      await Event.findById(
+        req.params.id
+      );
+
+    if (!event) {
+      res.status(404);
+      throw new Error(
+        "Event not found"
+      );
+    }
+
+    if (
+      event.status !==
+      "reschedule_requested"
+    ) {
+      res.status(400);
+      throw new Error(
+        "No reschedule request found"
+      );
+    }
+
+    // update actual event
+    event.date =
+      event
+        .rescheduleRequest
+        .newDate;
+
+    event.venue =
+      event
+        .rescheduleRequest
+        .newVenue;
+
+    event.time =
+      event
+        .rescheduleRequest
+        .newTime;
+
+    // reset request
+    event.status =
+      "approved";
+
+    event.rescheduleRequest = {
+      requested: false,
+      oldDate: null,
+      newDate: null,
+      oldVenue: "",
+      newVenue: "",
+      oldTime: "",
+      newTime: "",
+      reason: "",
+      requestedAt: null,
+    };
+
+    event.approvedBy =
+      req.user._id;
+
+    event.approvedAt =
+      new Date();
+
+    await event.save();
+
+    res.json({
+      message:
+        "Event rescheduled successfully",
+      event,
+    });
+  });
 export const approveSubevent = asyncHandler(async (req, res) => {
   const subevent = await Subevent.findById(req.params.id);
   if (!subevent) {

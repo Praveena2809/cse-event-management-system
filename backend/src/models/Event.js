@@ -119,6 +119,7 @@
 //   "Event",
 //   eventSchema
 // );
+// 
 import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema(
@@ -164,7 +165,19 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
 
-    // NEW: attendance control
+    // NEW: time field for rescheduling
+    time: {
+      type: String,
+      default: "",
+    },
+
+    // NEW: venue field for rescheduling + emails
+    venue: {
+      type: String,
+      default: "",
+    },
+
+    // attendance control
     attendanceEnabled: {
       type: Boolean,
       default: false,
@@ -215,12 +228,16 @@ const eventSchema = new mongoose.Schema(
       required: true,
     }, // coordinator
 
+    // UPDATED STATUS
     status: {
       type: String,
       enum: [
         "pending",
         "approved",
         "rejected",
+        "cancel_requested",
+        "cancelled",
+        "reschedule_requested",
       ],
       default: "pending",
       index: true,
@@ -228,6 +245,60 @@ const eventSchema = new mongoose.Schema(
 
     rejectionReason: {
       type: String,
+    },
+
+    // NEW: cancellation reason
+    cancelReason: {
+      type: String,
+      default: "",
+    },
+
+    // NEW: reschedule request data
+    rescheduleRequest: {
+      requested: {
+        type: Boolean,
+        default: false,
+      },
+
+      oldDate: {
+        type: Date,
+        default: null,
+      },
+
+      newDate: {
+        type: Date,
+        default: null,
+      },
+
+      oldVenue: {
+        type: String,
+        default: "",
+      },
+
+      newVenue: {
+        type: String,
+        default: "",
+      },
+
+      oldTime: {
+        type: String,
+        default: "",
+      },
+
+      newTime: {
+        type: String,
+        default: "",
+      },
+
+      reason: {
+        type: String,
+        default: "",
+      },
+
+      requestedAt: {
+        type: Date,
+        default: null,
+      },
     },
 
     approvedBy: {
@@ -242,8 +313,7 @@ const eventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Event =
-  mongoose.model(
-    "Event",
-    eventSchema
-  );
+export const Event = mongoose.model(
+  "Event",
+  eventSchema
+);

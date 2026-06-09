@@ -1070,28 +1070,62 @@ export default function Events() {
                               by
                               Coordinator
                             </button>
-                          ) : user.role ===
-                            "participant" ? (
-                            <button
-                              onClick={() =>
-                                register(
-                                  s._id
-                                )
-                              }
-                              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                            >
-                              Register
-                              Now
-                            </button>
-                          ) : (
-                            <span className="text-sm text-slate-500">
-                              Login
-                              as
-                              participant
-                              to
-                              register
-                            </span>
-                          )}
+                          // ) : user.role ===
+                          //   "participant" ? (
+                          //   <button
+                          //     onClick={() =>
+                          //       register(
+                          //         s._id
+                          //       )
+                          //     }
+                          //     className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                          //   >
+                          //     Register
+                          //     Now
+                          //   </button>
+                          // ) : (
+                          //   <span className="text-sm text-slate-500">
+                          //     Login
+                          //     as
+                          //     participant
+                          //     to
+                          //     register
+                          //   </span>
+                          // )}
+                        ) : e.status ===
+                        "cancelled" ? (
+                        <button
+                          disabled
+                          className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+                        >
+                          Event Cancelled
+                        </button>
+                      ) : e.status !==
+                        "approved" ? (
+                        <button
+                          disabled
+                          className="rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+                        >
+                          Event Unavailable
+                        </button>
+                      ) : user.role ===
+                        "participant" ? (
+                        <button
+                          onClick={() =>
+                            register(
+                              s._id
+                            )
+                          }
+                          className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                        >
+                          Register Now
+                        </button>
+                      ) : (
+                        <span className="text-sm text-slate-500">
+                          Login as participant
+                          to register
+                        </span>
+                      )}
                         </div>
                       </div>
                     </div>

@@ -152,6 +152,7 @@
 // export default router;
 
 import express from "express";
+
 import {
   approveEvent,
   approveSubevent,
@@ -169,9 +170,15 @@ import {
   updateWinners,
   exportParticipants,
 
-  // NEW
+  // attendance
   openAttendance,
   closeAttendance,
+
+  // NEW: cancellation & reschedule
+  requestCancellation,
+  approveCancellation,
+  requestReschedule,
+  approveReschedule,
 } from "../controllers/eventController.js";
 
 import {
@@ -184,13 +191,24 @@ import { upload } from "../utils/upload.js";
 const router =
   express.Router();
 
-// Public
+//
+// PUBLIC
+//
+
 router.get(
   "/public",
   listPublicEvents
 );
 
-// Coordinator
+router.get(
+  "/:id",
+  getEventById
+);
+
+//
+// COORDINATOR
+//
+
 router.get(
   "/me/list",
   protect,
@@ -235,6 +253,11 @@ router.post(
   ),
   createSubevent
 );
+
+//
+// EXPORT PARTICIPANTS
+//
+
 router.get(
   "/export-participants/:subeventId",
   protect,
@@ -243,7 +266,11 @@ router.get(
   ),
   exportParticipants
 );
-// Winner / Runner
+
+//
+// WINNER / RUNNER
+//
+
 router.patch(
   "/subevents/:id/winners",
   protect,
@@ -253,7 +280,10 @@ router.patch(
   updateWinners
 );
 
-// Registration toggle
+//
+// REGISTRATION TOGGLE
+//
+
 router.patch(
   "/subevents/:id/toggle-registration",
   protect,
@@ -264,10 +294,9 @@ router.patch(
 );
 
 //
-// NEW: ATTENDANCE CONTROLS
+// ATTENDANCE
 //
 
-// Open attendance
 router.patch(
   "/:id/open-attendance",
   protect,
@@ -277,7 +306,6 @@ router.patch(
   openAttendance
 );
 
-// Close attendance
 router.patch(
   "/:id/close-attendance",
   protect,
@@ -287,54 +315,116 @@ router.patch(
   closeAttendance
 );
 
-// HOD approvals
+//
+// NEW: EVENT CANCELLATION
+//
+
+// coordinator requests cancellation
+router.patch(
+  "/:id/request-cancel",
+  protect,
+  requireRole(
+    "coordinator"
+  ),
+  requestCancellation
+);
+
+// hod/admin approves cancellation
+router.patch(
+  "/hod/events/:id/approve-cancel",
+  protect,
+  requireRole(
+    "hod",
+    "admin"
+  ),
+  approveCancellation
+);
+
+//
+// NEW: EVENT RESCHEDULE
+//
+
+// coordinator requests reschedule
+router.patch(
+  "/:id/request-reschedule",
+  protect,
+  requireRole(
+    "coordinator"
+  ),
+  requestReschedule
+);
+
+// hod/admin approves reschedule
+router.patch(
+  "/hod/events/:id/approve-reschedule",
+  protect,
+  requireRole(
+    "hod",
+    "admin"
+  ),
+  approveReschedule
+);
+
+//
+// HOD APPROVALS
+//
+
 router.get(
   "/hod/pending",
   protect,
-  requireRole("hod"),
+  requireRole(
+    "hod"
+  ),
   listPendingApprovals
 );
 
 router.post(
   "/hod/events/:id/approve",
   protect,
-  requireRole("hod"),
+  requireRole(
+    "hod"
+  ),
   approveEvent
 );
 
 router.post(
   "/hod/events/:id/reject",
   protect,
-  requireRole("hod"),
+  requireRole(
+    "hod"
+  ),
   rejectEvent
 );
 
 router.post(
   "/hod/subevents/:id/approve",
   protect,
-  requireRole("hod"),
+  requireRole(
+    "hod"
+  ),
   approveSubevent
 );
 
 router.post(
   "/hod/subevents/:id/reject",
   protect,
-  requireRole("hod"),
+  requireRole(
+    "hod"
+  ),
   rejectSubevent
 );
 
-// Admin delete event
+//
+// ADMIN
+//
+
 router.delete(
   "/:id",
   protect,
-  requireRole("admin"),
+  requireRole(
+    "admin"
+  ),
   deleteEvent
-);
-
-// Event details
-router.get(
-  "/:id",
-  getEventById
 );
 
 export default router;
