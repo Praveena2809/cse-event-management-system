@@ -1,16 +1,30 @@
 import nodemailer from "nodemailer";
 
-export const createTransporter = () => {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-    throw new Error("SMTP_* env vars missing (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS)");
+let transporter = null;
+
+export const getTransporter = () => {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    transporter.verify((error) => {
+      if (error) {
+        console.log(
+          "❌ SMTP Error:",
+          error.message
+        );
+      } else {
+        console.log(
+          "✅ Email server ready"
+        );
+      }
+    });
   }
 
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
+  return transporter;
 };
-

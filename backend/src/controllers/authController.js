@@ -84,13 +84,21 @@ export const login = asyncHandler(async (req, res) => {
     res.status(401);
     throw new Error("Invalid credentials");
   }
-
+ 
+  
   const match = await user.matchPassword(password);
+  
+  
+  
   if (!match) {
     res.status(401);
     throw new Error("Invalid credentials");
   }
   if (role && user.role !== role) {
+    res.status(403);
+    throw new Error(`This login page is only for ${role}s`);
+   }
+  if (role && user.role.toLowerCase() !== role.toLowerCase()) {
     res.status(403);
     throw new Error(`This login page is only for ${role}s`);
   }

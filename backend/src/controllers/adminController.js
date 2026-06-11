@@ -30,19 +30,32 @@ export const createUser = asyncHandler(async (req, res) => {
   });
 
   // Send credentials by email (as requested). In production, send password-reset link instead.
+  // try {
+  //   await sendEmail({
+  //     to: email,
+  //     subject: "Your CSE Event System account",
+  //     html: `<p>Hello ${name},</p>
+  //       <p>Your account has been created with role <b>${role}</b>.</p>
+  //       <p><b>Login Email:</b> ${email}<br/><b>Temporary Password:</b> ${tempPassword}</p>
+  //       <p>Please login and change your password immediately.</p>`,
+  //   });
+  // } catch (e) {
+  //   // ignore in dev
+  // }
   try {
     await sendEmail({
       to: email,
-      subject: "Your CSE Event System account",
-      html: `<p>Hello ${name},</p>
-        <p>Your account has been created with role <b>${role}</b>.</p>
-        <p><b>Login Email:</b> ${email}<br/><b>Temporary Password:</b> ${tempPassword}</p>
-        <p>Please login and change your password immediately.</p>`,
+      subject: "Email System Test",
+      html: `
+        <h1>✅ Email System Working</h1>
+        <p>Hello ${name},</p>
+        <p>Your SMTP configuration is working correctly.</p>
+        <p>CSEA Event Management System</p>
+      `,
     });
   } catch (e) {
-    // ignore in dev
+    console.log("Email test failed:", e.message);
   }
-
   res.status(201).json({
     user: { id: user._id, name: user.name, email: user.email, role: user.role, isEmailVerified: user.isEmailVerified },
   });

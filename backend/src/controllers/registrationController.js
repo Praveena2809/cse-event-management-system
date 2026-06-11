@@ -312,6 +312,8 @@ import { razorpay } from "../config/razorpay.js";
 import { generateCertificatePdfBuffer } from "../utils/certificatePdf.js";
 import { Event } from "../models/Event.js";
 import { User } from "../models/User.js";
+import { sendEmail } from "../utils/email.js";
+import { Venue } from "../models/Venue.js";
 const buildApiUrl = (path = "/") => {
   const base =
     process.env.API_URL ||
@@ -326,14 +328,22 @@ export const registerForSubevent =
     const { subeventId } =
       req.params;
 
+    // const subevent =
+    //   await Subevent.findById(
+    //     subeventId
+    //   ).populate(
+    //     "event",
+    //     "name"
+    //   );
     const subevent =
-      await Subevent.findById(
-        subeventId
-      ).populate(
+    await Subevent.findById(
+      subeventId
+    )
+      .populate(
         "event",
-        "name"
-      );
-
+        "name date"
+      )
+     
     if (!subevent) {
       res.status(404);
       throw new Error(
@@ -473,6 +483,294 @@ if (
             ? "payment_pending"
             : "registered",
       });
+      // Send registration confirmation email
+try {
+  const participant =
+    await User.findById(
+      req.user._id
+    );
+
+  const eventDate =
+    subevent.event?.date
+      ? new Date(
+          subevent.event.date
+        ).toLocaleDateString(
+          "en-IN",
+          {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }
+        )
+      : "TBA";
+
+  const eventTime =
+    subevent.startAt
+      ? new Date(
+          subevent.startAt
+        ).toLocaleTimeString(
+          "en-IN",
+          {
+            hour: "2-digit",
+            minute:
+              "2-digit",
+          }
+        )
+      : "TBA";
+
+  const venueName =
+    subevent.venue
+      ?.name || "TBA";
+
+  const qrBase64 =
+    qrPngDataUrl.replace(
+      /^data:image\/png;base64,/,
+      ""
+    );
+    console.log("SUBEVENT DATA:");
+    console.log(subevent);
+    await sendEmail({
+      to: participant.email,
+    
+      subject: `🎉 Registration Confirmed - ${subevent.name}`,
+    
+      html: `
+      <div style="
+        font-family: Arial, sans-serif;
+        background:#f4f6f9;
+        padding:30px;
+      ">
+    
+        <div style="
+          max-width:650px;
+          margin:auto;
+          background:white;
+          border-radius:16px;
+          overflow:hidden;
+          box-shadow:0 4px 15px rgba(0,0,0,0.1);
+        ">
+    
+          <div style="
+            background:#1e3a8a;
+            color:white;
+            padding:25px;
+            text-align:center;
+          ">
+            <h1>
+              🎉 Registration Successful
+            </h1>
+    
+            <p>
+              CSEA Event Management
+            </p>
+          </div>
+    
+          <div style="padding:30px;">
+    
+            <p>
+              Hello
+              <b>${participant.name}</b>,
+            </p>
+    
+            <p>
+              You have successfully
+              registered for the event.
+            </p>
+    
+            <div style="
+              background:#f8fafc;
+              border:1px solid #e5e7eb;
+              border-radius:12px;
+              padding:20px;
+            ">
+    
+              <h2>
+                ${subevent.name}
+              </h2>
+    
+              <p>
+                <b>📌 Main Event:</b>
+                ${
+                  subevent.event
+                    ?.name
+                }
+              </p>
+    
+              <p>
+                <b>📅 Date:</b>
+                ${eventDate}
+              </p>
+    
+              <p>
+                <b>⏰ Time:</b>
+                ${eventTime}
+              </p>
+    
+              <p>
+                <b>📍 Venue:</b>
+                ${
+                  subevent
+                    .venue?.name ||
+                  "TBA"
+                }
+              </p>
+    
+              <p>
+                <b>🏢 Venue Details:</b>
+                ${
+                  subevent
+                    .venue
+                    ?.location ||
+                  "Campus Venue"
+                }
+              </p>
+    
+              <p>
+                <b>💰 Entry Fee:</b>
+                ₹${
+                  subevent.entryFee ||
+                  0
+                }
+              </p>
+    
+              <p>
+                <b>🆔 Registration ID:</b>
+                ${
+                  registration._id
+                }
+              </p>
+            </div>
+    
+            <br>
+    
+            <div style="
+              background:#eff6ff;
+              border-left:4px solid #2563eb;
+              padding:15px;
+              border-radius:8px;
+            ">
+    
+  <h3>
+  👨‍💼 Event Manager Details
+</h3>
+
+<p>
+  <b>Name:</b>
+  ${
+    subevent.eventManager ||
+    "Event Manager"
+  }
+</p>
+
+<p>
+  <b>Phone:</b>
+  ${
+    subevent.managerPhone ||
+    "N/A"
+  }
+</p>
+
+            </div>
+    
+            <br>
+    
+            <h3>
+              📲 Attendance QR
+            </h3>
+    
+            <p>
+              Please show this QR
+              during attendance.
+            </p>
+    
+            <div style="
+              text-align:center;
+            ">
+              <img
+                src="cid:eventqr"
+                width="220"
+              />
+            </div>
+    
+            <br>
+    
+            <div style="
+              background:#fff7ed;
+              border:1px solid #fdba74;
+              padding:18px;
+              border-radius:10px;
+            ">
+    
+              <h3>
+                ⚠ Important Instructions
+              </h3>
+    
+              <ul>
+                <li>
+                  Arrive
+                  <b>
+                    15 minutes early
+                  </b>
+                </li>
+    
+                <li>
+                  Bring your
+                  <b>
+                    college ID card
+                  </b>
+                </li>
+    
+                <li>
+                  Keep your QR ready
+                  for attendance
+                </li>
+    
+                <li>
+                  Any reschedule or
+                  cancellation will
+                  be informed by email
+                </li>
+              </ul>
+            </div>
+    
+            <br>
+    
+            <p>
+              Regards,<br>
+              <b>
+                CSEA Event
+                Management Team
+              </b>
+            </p>
+    
+          </div>
+        </div>
+      </div>
+      `,
+    
+      attachments: [
+        {
+          filename:
+            "event-qr.png",
+          content:
+            qrBase64,
+          encoding:
+            "base64",
+          cid: "eventqr",
+        },
+      ],
+    });
+
+  console.log(
+    "✅ Registration email sent"
+  );
+} catch (error) {
+  console.log(
+    "Registration email failed:",
+    error.message
+  );
+}
       await User.findByIdAndUpdate(
         req.user._id,
         {
