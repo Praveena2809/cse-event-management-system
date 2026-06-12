@@ -229,23 +229,41 @@ const eventSchema = new mongoose.Schema(
     }, // coordinator
 
     // UPDATED STATUS
+    // status: {
+    //   type: String,
+    //   enum: [
+    //     "pending",
+    //     "approved",
+    //     "rejected",
+    //     "cancel_requested",
+    //     "cancelled",
+    //     "reschedule_requested",
+    //   ],
+    //   default: "pending",
+    //   index: true,
+    // },
     status: {
       type: String,
       enum: [
-        "pending",
+        "draft",
+        "pending_review",
+        "revision_requested",
         "approved",
         "rejected",
         "cancel_requested",
         "cancelled",
-        "reschedule_requested",
       ],
-      default: "pending",
-      index: true,
+      default: "pending_review",
+    },
+    
+    hodFeedback: {
+      type: String,
+      default: "",
     },
 
-    rejectionReason: {
-      type: String,
-    },
+    // rejectionReason: {
+    //   type: String,
+    // },
 
     // NEW: cancellation reason
     cancelReason: {
@@ -307,6 +325,14 @@ const eventSchema = new mongoose.Schema(
     },
 
     approvedAt: {
+      type: Date,
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    
+    reviewedAt: {
       type: Date,
     },
   },

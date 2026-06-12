@@ -34,7 +34,7 @@ export default function CoordinatorOverview() {
         events.filter(
           (e) =>
             e.status ===
-            "pending"
+            "pending_review"
         ).length;
 
       const approved =

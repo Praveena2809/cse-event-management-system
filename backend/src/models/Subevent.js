@@ -140,19 +140,49 @@ const subeventSchema =
         ref: "Registration",
       },
 
+      // status: {
+      //   type: String,
+      //   enum: [
+      //     "pending",
+      //     "approved",
+      //     "rejected",
+      //   ],
+      //   default: "pending",
+      // },
       status: {
         type: String,
         enum: [
-          "pending",
+          "draft",
+          "pending_review",
           "approved",
+          "revision_requested",
           "rejected",
+          "cancel_requested",
+          "cancelled",
         ],
-        default: "pending",
+        default: "pending_review",
+      },
+      
+      hodFeedback: {
+        type: String,
+        default: "",
+      },
+      
+      revisionReason: {
+        type: String,
+        default: "",
+      },
+      
+      reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      
+      reviewedAt: {
+        type: Date,
       },
 
-      rejectionReason: {
-        type: String,
-      },
+      
 
       approvedBy: {
         type:

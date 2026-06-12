@@ -968,11 +968,20 @@ export default function Events() {
                   e.subevents ||
                   []
                 ).map((s) => {
-                  const hasEnded =
-                    new Date(
-                      s.endAt
-                    ) <
-                    new Date();
+                  const today =
+                  new Date();
+                
+                const endDate =
+                  new Date(
+                    s.endAt
+                  );
+                
+                // compare only date,
+                // ignore timezone hour bug
+                const hasEnded =
+                  today.toDateString() !==
+                    endDate.toDateString() &&
+                  today > endDate;
 
                   return (
                     <div
@@ -1042,8 +1051,64 @@ export default function Events() {
                             }
                           </span>
                         </div>
-
                         <div className="mt-4">
+  {!user ? (
+    <Link
+      to="/login"
+      className="inline-flex rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+    >
+      Login to Register
+    </Link>
+  ) : s.status ===
+    "cancelled" ? (
+    <button
+      disabled
+      className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+    >
+      Event Cancelled
+    </button>
+  ) : s.status !==
+    "approved" ? (
+    <button
+      disabled
+      className="rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+    >
+      Awaiting Approval
+    </button>
+  ) : hasEnded ? (
+    <button
+      disabled
+      className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+    >
+      Registration Closed
+    </button>
+  ) : s.registrationsClosed ? (
+    <button
+      disabled
+      className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+    >
+      Closed by Coordinator
+    </button>
+  ) : user.role ===
+    "participant" ? (
+    <button
+      onClick={() =>
+        register(
+          s._id
+        )
+      }
+      className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+    >
+      Register Now
+    </button>
+  ) : (
+    <span className="text-sm text-slate-500">
+      Login as participant
+      to register
+    </span>
+  )}
+</div>
+                        {/* <div className="mt-4">
                           {!user ? (
                             <Link
                               to="/login"
@@ -1092,41 +1157,75 @@ export default function Events() {
                           //     register
                           //   </span>
                           // )}
-                        ) : e.status ===
-                        "cancelled" ? (
-                        <button
-                          disabled
-                          className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white opacity-80"
-                        >
-                          Event Cancelled
-                        </button>
-                      ) : e.status !==
-                        "approved" ? (
-                        <button
-                          disabled
-                          className="rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white opacity-80"
-                        >
-                          Event Unavailable
-                        </button>
-                      ) : user.role ===
-                        "participant" ? (
-                        <button
-                          onClick={() =>
-                            register(
-                              s._id
-                            )
-                          }
-                          className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                        >
-                          Register Now
-                        </button>
-                      ) : (
-                        <span className="text-sm text-slate-500">
-                          Login as participant
-                          to register
-                        </span>
-                      )}
-                        </div>
+                      //   ) : e.status ===
+                      //   "cancelled" ? (
+                      //   <button
+                      //     disabled
+                      //     className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+                      //   >
+                      //     Event Cancelled
+                      //   </button>
+                      // ) : e.status !==
+                      //   "approved" ? (
+                      //   <button
+                      //     disabled
+                      //     className="rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+                      //   >
+                      //     Event Unavailable
+                      //   </button>
+                      // ) : user.role ===
+                      //   "participant" ? (
+                      //   <button
+                      //     onClick={() =>
+                      //       register(
+                      //         s._id
+                      //       )
+                      //     }
+                      //     className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                      //   >
+                      //     Register Now
+                      //   </button>
+                      // ) : (
+                      //   <span className="text-sm text-slate-500">
+                      //     Login as participant
+                      //     to register
+                      //   </span>
+                      // )}
+                    ) : s.status ===
+                    "cancelled" ? (
+                      <button
+                        disabled
+                        className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+                      >
+                        Event Cancelled
+                      </button>
+                    ) : s.status !==
+                    "approved" ? (
+                      <button
+                        disabled
+                        className="rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white opacity-80"
+                      >
+                        Awaiting Approval
+                      </button>
+                    ) : user.role ===
+                    "participant" ? (
+                      <button
+                        onClick={() =>
+                          register(
+                            s._id
+                          )
+                        }
+                        className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                      >
+                        Register Now
+                      </button>
+                    ) : (
+                      <span className="text-sm text-slate-500">
+                        Login as participant
+                        to register
+                      </span>
+                    )}
+                        </div> */}
                       </div>
                     </div>
                   );

@@ -14,7 +14,7 @@ const coordinatorApplicationSchema = new mongoose.Schema(
     achievements: { type: String, required: true },
     visionForEvent: { type: String, required: true },
 
-    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    status: { type: String, enum: ["pending_review", "approved", "rejected"], default: "pending_review" },
     rejectionReason: { type: String },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     reviewedAt: { type: Date },

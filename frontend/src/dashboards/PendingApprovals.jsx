@@ -3,9 +3,14 @@ import toast from "react-hot-toast";
 import { api } from "../services/api";
 
 export default function PendingApprovals() {
-  const [data, setData] = useState({
-    events: [],
-    subevents: [],
+  // const [data, setData] = useState({
+  //   events: [],
+  //   subevents: [],
+  // });
+  const [data, setData] =
+  useState({
+    proposals: [],
+    pendingSubevents: [],
   });
 
   const [reason, setReason] =
@@ -17,11 +22,19 @@ export default function PendingApprovals() {
         "/events/hod/pending"
       );
 
+    // setData({
+    //   events:
+    //     data.events || [],
+    //   subevents:
+    //     data.subevents ||
+    //     [],
+    // });
     setData({
-      events:
-        data.events || [],
-      subevents:
-        data.subevents ||
+      proposals:
+        data.proposals || [],
+    
+      pendingSubevents:
+        data.pendingSubevents ||
         [],
     });
   };
@@ -99,6 +112,56 @@ export default function PendingApprovals() {
 
       load();
     };
+    const reviewProposal =
+  async (
+    eventId,
+    subevents
+  ) => {
+    try {
+      const payload = {
+        overallFeedback:
+          reason[
+            `event-${eventId}`
+          ] || "",
+
+        subevents:
+          subevents.map(
+            (s) => ({
+              subeventId:
+                s._id,
+
+                action:
+                reason[
+                  `decision-${s._id}`
+                ] ||
+                "revision_requested",
+
+              reason:
+                reason[
+                  s._id
+                ] || "",
+            })
+          ),
+      };
+
+      await api.put(
+        `/events/hod/events/${eventId}/review-proposal`,
+        payload
+      );
+
+      toast.success(
+        "Proposal reviewed"
+      );
+
+      load();
+    } catch (err) {
+      toast.error(
+        err?.response?.data
+          ?.message ||
+          "Failed"
+      );
+    }
+  };
 
   //
   // NEW: CANCEL APPROVAL
@@ -167,200 +230,394 @@ export default function PendingApprovals() {
 
       {/* MAIN EVENTS */}
 
-      <div className="space-y-3">
-        <p className="font-semibold text-slate-900 dark:text-white">
-          Main Events
-        </p>
+     {/* EVENT PROPOSALS */}
 
-        {data.events.map(
-          (e) => (
-            <div
-              key={e._id}
-              className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
-            >
-              <p className="font-semibold">
-                {e.name}
-              </p>
+<div className="space-y-3">
+  <p className="font-semibold text-slate-900 dark:text-white">
+    Event Proposals
+  </p>
 
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                {
-                  e.description
-                }
-              </p>
+  {(
+  data.proposals || []
+).map(    (proposal) => (
+      <div
+        key={proposal.event._id}
+        className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+      >
+        {/* EVENT DETAILS
 
-              <p className="mt-1 text-xs text-slate-500">
-                Created by:{" "}
-                {
-                  e
-                    .createdBy
-                    ?.name
-                }{" "}
-                (
-                {
-                  e
-                    .createdBy
-                    ?.email
-                }
-                )
-              </p>
+        <div className="mb-4">
+          <p className="text-lg font-bold">
+            {proposal.event.name}
+          </p>
 
-              {/* CANCELLATION REQUEST */}
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {proposal.event.description}
+          </p>
 
-              {e.status ===
-                "cancel_requested" && (
-                <div className="mt-3 rounded-lg bg-red-100 p-3 text-sm text-red-700">
-                  <p className="font-semibold">
-                    Cancellation
-                    Requested
-                  </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Created by:{" "}
+            {
+              proposal.event
+                .createdBy?.name
+            }{" "}
+            (
+            {
+              proposal.event
+                .createdBy?.email
+            }
+            )
+          </p>
+        </div> */}
+{/* EVENT DETAILS */}
 
-                  <p>
-                    Reason:{" "}
-                    {
-                      e.cancelReason
-                    }
-                  </p>
+<div className="mb-6 rounded-lg border border-slate-700 p-4">
+  <h2 className="text-2xl font-bold">
+    {proposal.event.name}
+  </h2>
 
-                  <button
-                    onClick={() =>
-                      approveCancel(
-                        e._id
-                      )
-                    }
-                    className="mt-3 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white"
-                  >
+  <p className="mt-2 text-slate-300">
+    {proposal.event.description}
+  </p>
+
+  <div className="mt-4 grid gap-2 md:grid-cols-2 text-sm text-slate-300">
+    <p>
+      <strong>
+        Event Type:
+      </strong>{" "}
+      {
+        proposal.event
+          .eventType
+      }
+    </p>
+
+    <p>
+      <strong>
+        Date:
+      </strong>{" "}
+      {new Date(
+        proposal.event.date
+      ).toLocaleDateString()}
+    </p>
+
+    <p>
+      <strong>
+        Budget:
+      </strong>{" "}
+      ₹
+      {
+        proposal.event
+          .budgetEstimate
+      }
+    </p>
+
+    <p>
+      <strong>
+        Number of Subevents:
+      </strong>{" "}
+      {
+        proposal.event
+          .numberOfSubevents
+      }
+    </p>
+  </div>
+
+  <div className="mt-4">
+    <p className="font-semibold">
+      Notes for HOD
+    </p>
+
+    <p className="text-sm text-slate-400">
+      {
+        proposal.event
+          .miscNotesForHod
+      }
+    </p>
+  </div>
+
+  <div className="mt-4 text-sm text-slate-400">
+    Coordinator:
+    {" "}
+    {
+      proposal.event
+        .createdBy?.name
+    }
+    {" "}
+    (
+    {
+      proposal.event
+        .createdBy?.email
+    }
+    )
+  </div>
+</div>
+        {/* SUBEVENTS */}
+
+        <div className="space-y-4">
+        {(
+  proposal.subevents || []
+).map(
+            (s) => (
+              <div
+                key={s._id}
+                className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+              >
+                {/* <p className="font-semibold">
+                  {s.name}
+                </p>
+
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  {
+                    s.description
+                  }
+                </p>
+
+                <div className="mt-2 text-sm text-slate-500">
+                  Venue:{" "}
+                  {s.venue?.name ||
+                    "N/A"}
+                </div> */}
+                <h4 className="text-lg font-bold">
+  {s.name}
+</h4>
+
+<p className="mt-1 text-sm text-slate-300">
+  {s.description}
+</p>
+
+<div className="mt-4 grid gap-2 md:grid-cols-2 text-sm">
+  <p>
+    <strong>
+      Type:
+    </strong>{" "}
+    {s.type}
+  </p>
+
+  <p>
+    <strong>
+      Venue:
+    </strong>{" "}
+    {s.venue?.name ||
+      "Not selected"}
+  </p>
+
+  <p>
+    <strong>
+      Start Time:
+    </strong>{" "}
+    {s.startAt
+      ? new Date(
+          s.startAt
+        ).toLocaleString()
+      : "N/A"}
+  </p>
+
+  <p>
+    <strong>
+      End Time:
+    </strong>{" "}
+    {s.endAt
+      ? new Date(
+          s.endAt
+        ).toLocaleString()
+      : "N/A"}
+  </p>
+
+  <p>
+    <strong>
+      Eligibility:
+    </strong>{" "}
+    {s.eligibility ||
+      "N/A"}
+  </p>
+
+  <p>
+    <strong>
+      Max Participants:
+    </strong>{" "}
+    {
+      s.maxParticipants
+    }
+  </p>
+
+  <p>
+    <strong>
+      Entry Fee:
+    </strong>{" "}
+    ₹{s.entryFee}
+  </p>
+
+  <p>
+    <strong>
+      Event Manager:
+    </strong>{" "}
+    {
+      s.eventManager
+    }
+  </p>
+
+  <p>
+    <strong>
+      Manager Phone:
+    </strong>{" "}
+    {
+      s.managerPhone
+    }
+  </p>
+
+  <p>
+    <strong>
+      Prize Pool:
+    </strong>{" "}
+    {s.prizePool ||
+      "N/A"}
+  </p>
+</div>
+
+                {/* APPROVE / REVISION */}
+
+                <div className="mt-4 flex gap-5">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`decision-${s._id}`}
+                      checked={
+                        reason[
+                          `decision-${s._id}`
+                        ] ===
+                        "approved"
+                      }
+                      onChange={() =>
+                        setReason(
+                          (
+                            r
+                          ) => ({
+                            ...r,
+                            [
+                              `decision-${s._id}`
+                            ]:
+                              "approved",
+                          })
+                        )
+                      }
+                    />
+
                     Approve
-                    Cancellation
-                  </button>
+                  </label>
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`decision-${s._id}`}
+                      checked={
+                        reason[
+                          `decision-${s._id}`
+                        ] ===
+                        "revision_requested"
+                      }
+                      onChange={() =>
+                        setReason(
+                          (
+                            r
+                          ) => ({
+                            ...r,
+                            [
+                              `decision-${s._id}`
+                            ]:
+                              "revision_requested",
+                          })
+                        )
+                      }
+                    />
+
+                    Request
+                    Revision
+                  </label>
                 </div>
-              )}
 
-              {/* RESCHEDULE REQUEST */}
-
-              {e.status ===
-                "reschedule_requested" && (
-                <div className="mt-3 rounded-lg bg-yellow-100 p-3 text-sm text-yellow-800">
-                  <p className="font-semibold">
-                    Reschedule
-                    Requested
-                  </p>
-
-                  <p>
-                    New Date:{" "}
-                    {new Date(
-                      e
-                        .rescheduleRequest
-                        ?.newDate
-                    ).toLocaleDateString()}
-                  </p>
-
-                  <p>
-                    New Venue:{" "}
-                    {
-                      e
-                        .rescheduleRequest
-                        ?.newVenue
-                    }
-                  </p>
-
-                  <p>
-                    New Time:{" "}
-                    {
-                      e
-                        .rescheduleRequest
-                        ?.newTime
-                    }
-                  </p>
-
-                  <p>
-                    Reason:{" "}
-                    {
-                      e
-                        .rescheduleRequest
-                        ?.reason
-                    }
-                  </p>
-
-                  <button
-                    onClick={() =>
-                      approveReschedule(
-                        e._id
-                      )
-                    }
-                    className="mt-3 rounded-md bg-yellow-600 px-3 py-2 text-sm font-medium text-white"
-                  >
-                    Approve
-                    Reschedule
-                  </button>
-                </div>
-              )}
-
-              {/* NORMAL APPROVAL */}
-
-              {e.status ===
-                "pending" && (
-                <div className="mt-3 grid gap-2 md:grid-cols-[1fr_auto_auto]">
-                  <input
-                    placeholder="Rejection reason"
+                {reason[
+                  `decision-${s._id}`
+                ] ===
+                  "revision_requested" && (
+                  <textarea
+                    placeholder="Reason for revision"
                     value={
                       reason[
-                        e._id
+                        s._id
                       ] || ""
                     }
                     onChange={(
-                      ev
+                      e
                     ) =>
                       setReason(
                         (
                           r
                         ) => ({
                           ...r,
-                          [e._id]:
-                            ev
-                              .target
+                          [s._id]:
+                            e.target
                               .value,
                         })
                       )
                     }
-                    className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+                    className="mt-3 w-full rounded-md border border-slate-200 p-2 text-sm dark:border-slate-800 dark:bg-slate-950"
                   />
+                )}
+              </div>
+            )
+          )}
+        </div>
 
-                  <button
-                    onClick={() =>
-                      approveEvent(
-                        e._id
-                      )
-                    }
-                    className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white"
-                  >
-                    Approve
-                  </button>
+        {/* OVERALL FEEDBACK */}
 
-                  <button
-                    onClick={() =>
-                      rejectEvent(
-                        e._id
-                      )
-                    }
-                    className="rounded-md bg-rose-600 px-3 py-2 text-sm font-medium text-white"
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
-            </div>
-          )
-        )}
+        <textarea
+          placeholder="Overall feedback to coordinator"
+          value={
+            reason[
+              `event-${proposal.event._id}`
+            ] || ""
+          }
+          onChange={(
+            e
+          ) =>
+            setReason(
+              (r) => ({
+                ...r,
+                [
+                  `event-${proposal.event._id}`
+                ]:
+                  e.target
+                    .value,
+              })
+            )
+          }
+          className="mt-4 w-full rounded-md border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950"
+        />
 
-        {!data.events
-          .length && (
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            No pending
-            main events.
-          </p>
-        )}
+        <button
+          onClick={() =>
+            reviewProposal(
+              proposal.event
+                ._id,
+              proposal.subevents
+            )
+          }
+          className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-white"
+        >
+          Submit Review
+        </button>
       </div>
+    )
+  )}
 
+  {!data.proposals
+    .length && (
+    <p className="text-sm text-slate-600 dark:text-slate-300">
+      No pending
+      proposals.
+    </p>
+  )}
+</div>
       {/* SUBEVENTS */}
 
       <div className="space-y-3">
@@ -368,8 +625,10 @@ export default function PendingApprovals() {
           Subevents
         </p>
 
-        {data.subevents.map(
-          (s) => (
+        {(
+  data.pendingSubevents ||
+  []
+).map(          (s) => (
             <div
               key={s._id}
               className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"

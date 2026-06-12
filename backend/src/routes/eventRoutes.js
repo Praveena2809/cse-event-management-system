@@ -169,6 +169,8 @@ import {
   updateMainEvent,
   updateWinners,
   exportParticipants,
+  reviewEventProposal,
+  updateSubevent,
 
   // attendance
   openAttendance,
@@ -252,6 +254,14 @@ router.post(
     "poster"
   ),
   createSubevent
+);
+router.put(
+  "/subevents/:id",
+  protect,
+  requireRole(
+    "coordinator"
+  ),
+  updateSubevent
 );
 
 //
@@ -377,7 +387,15 @@ router.get(
   ),
   listPendingApprovals
 );
-
+// NEW: review full event proposal
+router.put(
+  "/hod/events/:id/review-proposal",
+  protect,
+  requireRole(
+    "hod"
+  ),
+  reviewEventProposal
+);
 router.post(
   "/hod/events/:id/approve",
   protect,

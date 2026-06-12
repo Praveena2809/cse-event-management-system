@@ -118,7 +118,10 @@
 //     </div>
 //   );
 // }
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 
@@ -135,14 +138,165 @@ export default function CreateMainEvent() {
 
   const [poster, setPoster] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [venues, setVenues] =
+  useState([]);
 
+const [availabilityMap,
+  setAvailabilityMap] =
+  useState({});
+  useEffect(() => {
+    const loadVenues =
+      async () => {
+        try {
+          const {
+            data,
+          } =
+            await api.get(
+              "/venues"
+            );
+  
+          setVenues(
+            data.venues ||
+              []
+          );
+        } catch (err) {
+          console.error(
+            err
+          );
+        }
+      };
+  
+    loadVenues();
+  }, []);
+  const [subevents, setSubevents] =
+  useState([
+    {
+      type: "workshop",
+      name: "",
+      description: "",
+      venue: "",
+      startAt: "",
+      endAt: "",
+      eligibility: "",
+      maxParticipants: "",
+      entryFee: "",
+      eventManager: "",
+      managerPhone: "",
+      prizePool: "",
+      poster:null,
+    },
+  ]);
   const onChange = (e) => {
     setForm((f) => ({
       ...f,
       [e.target.name]: e.target.value,
     }));
   };
-
+  const addSubevent = () => {
+    setSubevents((prev) => [
+      ...prev,
+      {
+        type: "workshop",
+        name: "",
+        description: "",
+        venue: "",
+        startAt: "",
+        endAt: "",
+        eligibility: "",
+        maxParticipants: "",
+        entryFee: "",
+        eventManager: "",
+        managerPhone: "",
+        prizePool: "",
+        poster: null,
+      },
+    ]);
+  };
+  
+  const updateSubevent =
+    (
+      index,
+      field,
+      value
+    ) => {
+      setSubevents((prev) =>
+        prev.map((s, i) =>
+          i === index
+            ? {
+                ...s,
+                [field]:
+                  value,
+              }
+            : s
+        )
+      );
+    };
+  
+  const removeSubevent =
+    (index) => {
+      setSubevents((prev) =>
+        prev.filter(
+          (_, i) =>
+            i !== index
+        )
+      );
+    };
+    const checkAvailability =
+    async (
+      index
+    ) => {
+      const s =
+        subevents[
+          index
+        ];
+  
+      if (
+        !s.venue ||
+        !s.startAt ||
+        !s.endAt
+      )
+        return;
+  
+      try {
+        const {
+          data,
+        } =
+          await api.get(
+            `/venues/availability?venueId=${s.venue}&startAt=${encodeURIComponent(
+              s.startAt
+            )}&endAt=${encodeURIComponent(
+              s.endAt
+            )}`
+          );
+  
+        setAvailabilityMap(
+          (
+            prev
+          ) => ({
+            ...prev,
+            [index]:
+              data,
+          })
+        );
+      } catch (err) {
+        setAvailabilityMap(
+          (
+            prev
+          ) => ({
+            ...prev,
+            [index]:
+              {
+                error:
+                  err
+                    ?.response
+                    ?.data
+                    ?.message ||
+                  "Failed",
+              },
+          })
+        );
+      }
+    };
   const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -153,6 +307,24 @@ export default function CreateMainEvent() {
       Object.entries(form).forEach(([k, v]) =>
         fd.append(k, v)
       );
+      const cleanedSubevents =
+  subevents.map((s) => ({
+    ...s,
+    poster: null,
+  }));
+
+fd.append(
+  "subevents",
+  JSON.stringify(
+    cleanedSubevents
+  )
+);
+      // fd.append(
+      //   "subevents",
+      //   JSON.stringify(
+      //     subevents
+      //   )
+      // );
 
       if (poster) {
         fd.append("poster", poster);
@@ -331,7 +503,562 @@ export default function CreateMainEvent() {
             className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
         </div>
+{/* INITIAL SUBEVENTS */}
 
+<div className="md:col-span-2 mt-6">
+  <div className="flex items-center justify-between">
+    <h4 className="text-lg font-semibold">
+      Initial Subevents
+    </h4>
+
+    <button
+      type="button"
+      onClick={addSubevent}
+      className="rounded-md bg-green-600 px-3 py-2 text-white"
+    >
+      + Add Subevent
+    </button>
+  </div>
+
+  <div className="mt-4 space-y-4">
+    {subevents.map(
+      (s, index) => (
+        <div
+          key={index}
+          className="rounded-xl border border-slate-300 p-4 dark:border-slate-700"
+        >
+          <div className="flex justify-between">
+            <h5 className="font-semibold">
+              Subevent{" "}
+              {index + 1}
+            </h5>
+
+            {subevents.length >
+              1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  removeSubevent(
+                    index
+                  )
+                }
+                className="text-red-500"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+{/* 
+          <input
+            placeholder="Subevent Name"
+            value={s.name}
+            onChange={(e) =>
+              updateSubevent(
+                index,
+                "name",
+                e.target.value
+              )
+            }
+            className="mt-3 w-full rounded-md border p-2"
+          /> */}
+<div className="md:col-span-2">
+  <label className="text-sm font-medium">
+    Subevent Name
+  </label>
+
+  <input
+    value={s.name}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "name",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+<div>
+  <label className="text-sm font-medium">
+    Type
+  </label>
+
+  <select
+    value={s.type}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "type",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  >
+    <option value="workshop">
+      Workshop
+    </option>
+
+    <option value="competitive">
+      Competitive
+    </option>
+  </select>
+</div>
+          {/* <textarea
+            placeholder="Description"
+            value={
+              s.description
+            }
+            onChange={(e) =>
+              updateSubevent(
+                index,
+                "description",
+                e.target.value
+              )
+            }
+            className="mt-3 w-full rounded-md border p-2"
+          /> */}
+          <div className="md:col-span-2">
+  <label className="text-sm font-medium">
+    Description
+  </label>
+
+  <textarea
+    rows={3}
+    value={s.description}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "description",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+<div>
+  <label className="text-sm font-medium">
+    Venue
+  </label>
+
+  <select
+    value={s.venue}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "venue",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  >
+    <option value="">
+      Select Venue
+    </option>
+
+    {venues.map(
+      (v) => (
+        <option
+          key={v._id}
+          value={v._id}
+        >
+          {v.name}
+        </option>
+      )
+    )}
+  </select>
+</div>
+          {/* <input
+          
+            type="datetime-local"
+            value={
+              s.startAt
+            }
+            onChange={(e) =>
+              updateSubevent(
+                index,
+                "startAt",
+                e.target.value
+              )
+            }
+            className="mt-3 w-full rounded-md border p-2"
+          /> */}
+          <div>
+  <label className="text-sm font-medium">
+    Start Time
+  </label>
+
+  <input
+    type="datetime-local"
+    value={s.startAt}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "startAt",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+
+          {/* <input
+            type="datetime-local"
+            value={s.endAt}
+            onChange={(e) =>
+              updateSubevent(
+                index,
+                "endAt",
+                e.target.value
+              )
+            }
+            className="mt-3 w-full rounded-md border p-2"
+          /> */}
+          <div>
+  <label className="text-sm font-medium">
+    End Time
+  </label>
+
+  <input
+    type="datetime-local"
+    value={s.endAt}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "endAt",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+{/* <div className="md:col-span-2">
+  <button
+    type="button"
+    onClick={() =>
+      checkAvailability(
+        index
+      )
+    }
+    className="rounded-md border border-slate-600 px-4 py-2"
+  >
+    Check Venue
+    Availability
+  </button>
+
+  <div className="md:col-span-2">
+  <button
+    type="button"
+    onClick={() =>
+      checkAvailability(
+        index
+      )
+    }
+    className="rounded-md border border-slate-600 px-4 py-2"
+  >
+    Check Venue
+    Availability
+  </button>
+
+  {availabilityMap[
+    index
+  ]?.conflicts
+    ?.length ? (
+    <p className="mt-2 text-sm text-red-600">
+      Conflict! This
+      slot is already
+      booked. Try
+      another
+      venue/time.
+    </p>
+  ) : availabilityMap[
+      index
+    ] &&
+    !availabilityMap[
+      index
+    ]?.error ? (
+    <p className="mt-2 text-sm text-emerald-600">
+      No conflicts
+      for selected
+      venue.
+    </p>
+  ) : null}
+
+  {availabilityMap[
+    index
+  ]
+    ?.suggestedAlternateVenues
+    ?.length ? (
+    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+      Suggested
+      alternate
+      venues:
+      {" "}
+      {availabilityMap[
+        index
+      ]
+        .suggestedAlternateVenues
+        .map(
+          (
+            v
+          ) =>
+            v.name
+        )
+        .join(
+          ", "
+        )}
+    </p>
+  ) : null}
+
+  {availabilityMap[
+    index
+  ]?.error ? (
+    <p className="mt-2 text-sm text-red-600">
+      {
+        availabilityMap[
+          index
+        ].error
+      }
+    </p>
+  ) : null}
+</div>
+
+  {availabilityMap[
+    index
+  ]?.available ===
+    true && (
+    <div className="mt-3 text-green-400">
+      Venue Available
+    </div>
+  )}
+    
+</div> */}
+<div className="md:col-span-2">
+  <button
+    type="button"
+    onClick={() =>
+      checkAvailability(
+        index
+      )
+    }
+    className="rounded-md border border-slate-600 px-4 py-2"
+  >
+    Check Venue Availability
+  </button>
+
+  {availabilityMap[
+    index
+  ]?.conflicts?.length ? (
+    <p className="mt-2 text-sm text-red-600">
+      Conflict! This slot is already booked.
+      Try another venue or time.
+    </p>
+  ) : availabilityMap[
+      index
+    ] &&
+    !availabilityMap[
+      index
+    ]?.error ? (
+    <p className="mt-2 text-sm text-emerald-600">
+      No conflicts for selected venue.
+    </p>
+  ) : null}
+
+  {availabilityMap[
+    index
+  ]
+    ?.suggestedAlternateVenues
+    ?.length ? (
+    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+      Suggested alternate venues:
+      {" "}
+      {availabilityMap[
+        index
+      ]
+        .suggestedAlternateVenues
+        .map(
+          (
+            v
+          ) => v.name
+        )
+        .join(", ")}
+    </p>
+  ) : null}
+
+  {availabilityMap[
+    index
+  ]?.error ? (
+    <p className="mt-2 text-sm text-red-600">
+      {
+        availabilityMap[
+          index
+        ].error
+      }
+    </p>
+  ) : null}
+</div>
+<div>
+  <label className="text-sm font-medium">
+    Eligibility
+  </label>
+
+  <input
+    value={
+      s.eligibility
+    }
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "eligibility",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+<div>
+  <label className="text-sm font-medium">
+    Max Participants
+  </label>
+
+  <input
+    type="number"
+    value={
+      s.maxParticipants
+    }
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "maxParticipants",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+<div>
+  <label className="text-sm font-medium">
+    Entry Fee (₹)
+  </label>
+
+  <input
+    type="number"
+    value={s.entryFee}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "entryFee",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+          {/* <input
+            placeholder="Event Manager"
+            value={
+              s.eventManager
+            }
+            onChange={(e) =>
+              updateSubevent(
+                index,
+                "eventManager",
+                e.target.value
+              )
+            }
+            className="mt-3 w-full rounded-md border p-2"
+          /> */}
+<div>
+  <label className="text-sm font-medium">
+    Event Manager
+  </label>
+
+  <input
+    value={
+      s.eventManager
+    }
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "eventManager",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+          {/* <input
+            placeholder="Manager Phone"
+            value={
+              s.managerPhone
+            }
+            onChange={(e) =>
+              updateSubevent(
+                index,
+                "managerPhone",
+                e.target.value
+              )
+            }
+            className="mt-3 w-full rounded-md border p-2"
+          /> */}
+          <div>
+  <label className="text-sm font-medium">
+    Manager Phone
+  </label>
+
+  <input
+    value={
+      s.managerPhone
+    }
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "managerPhone",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+<div className="md:col-span-2">
+  <label className="text-sm font-medium">
+    Prize Pool
+  </label>
+
+  <input
+    value={s.prizePool}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "prizePool",
+        e.target.value
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+<div className="md:col-span-2">
+  <label className="text-sm font-medium">
+    Poster
+  </label>
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "poster",
+        e.target.files[0]
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+  />
+</div>
+        </div>
+      )
+    )}
+  </div>
+</div>
         {/* Submit */}
         <button
           type="submit"

@@ -9,6 +9,8 @@ import { Registration }
  
 import { User }
   from "../models/User.js";
+  import { sendEmail }
+  from "../utils/email.js";
 const isOverlapping = (aStart, aEnd, bStart, bEnd) => {
   return aStart < bEnd && bStart < aEnd;
 };
@@ -48,33 +50,170 @@ export const getEventById = asyncHandler(async (req, res) => {
 });
 
 // Coordinator
-export const createMainEvent = asyncHandler(async (req, res) => {
-  const { name, description, date, budgetEstimate, numberOfSubevents, miscNotesForHod } = req.body;
-  if (!name || !description || !date) {
-    res.status(400);
-    throw new Error("name, description and date are required");
-  }
+// export const createMainEvent = asyncHandler(async (req, res) => {
+//   const { name, description, date, budgetEstimate, numberOfSubevents, miscNotesForHod } = req.body;
+//   if (!name || !description || !date) {
+//     res.status(400);
+//     throw new Error("name, description and date are required");
+//   }
 
-  let posterUrl;
-  if (req.file?.path) {
-    const uploaded = await uploadToCloudinaryIfConfigured(req.file.path, "cse-events/posters");
-    posterUrl = uploaded.url || `/uploads/${req.file.filename}`;
-  }
+//   let posterUrl;
+//   if (req.file?.path) {
+//     const uploaded = await uploadToCloudinaryIfConfigured(req.file.path, "cse-events/posters");
+//     posterUrl = uploaded.url || `/uploads/${req.file.filename}`;
+//   }
 
-  const event = await Event.create({
-    name,
-    description,
-    date: new Date(date),
-    budgetEstimate: Number(budgetEstimate || 0),
-    numberOfSubevents: Number(numberOfSubevents || 0),
-    miscNotesForHod,
-    posterUrl,
-    createdBy: req.user._id,
+//   const event = await Event.create({
+//     name,
+//     description,
+//     date: new Date(date),
+//     budgetEstimate: Number(budgetEstimate || 0),
+//     numberOfSubevents: Number(numberOfSubevents || 0),
+//     miscNotesForHod,
+//     posterUrl,
+//     createdBy: req.user._id,
+//   });
+
+//   res.status(201).json({ event });
+// });
+export const createMainEvent =
+  asyncHandler(async (req, res) => {
+    const {
+      name,
+      description,
+      date,
+      budgetEstimate,
+      numberOfSubevents,
+      miscNotesForHod,
+
+      // NEW
+      subevents = "[]",
+    } = req.body;
+
+    if (
+      !name ||
+      !description ||
+      !date
+    ) {
+      res.status(400);
+      throw new Error(
+        "name, description and date are required"
+      );
+    }
+
+    let posterUrl;
+
+    if (req.file?.path) {
+      const uploaded =
+        await uploadToCloudinaryIfConfigured(
+          req.file.path,
+          "cse-events/posters"
+        );
+
+      posterUrl =
+        uploaded.url ||
+        `/uploads/${req.file.filename}`;
+    }
+
+    // create event
+    const event =
+      await Event.create({
+        name,
+        description,
+        date: new Date(date),
+        budgetEstimate:
+          Number(
+            budgetEstimate || 0
+          ),
+        numberOfSubevents:
+          Number(
+            numberOfSubevents ||
+              0
+          ),
+        miscNotesForHod,
+        posterUrl,
+        createdBy:
+          req.user._id,
+
+        status: "pending_review",
+      });
+
+    // create initial subevents
+    const parsedSubevents =
+  JSON.parse(
+    subevents || "[]"
+  );
+    // if (
+    //   Array.isArray(
+    //     parsedSubevents
+    //   ) &&
+    //   subevents.length > 0
+    // ) {
+    //   for (const sub of subevents) {
+      if (
+        Array.isArray(
+          parsedSubevents
+        ) &&
+        parsedSubevents.length > 0
+      ) {
+        for (const sub of parsedSubevents) {
+        await Subevent.create({
+          event: event._id,
+
+          type: sub.type,
+          name: sub.name,
+          description:
+            sub.description,
+
+          venue:
+            sub.venue || null,
+
+          startAt:
+            sub.startAt,
+
+          endAt:
+            sub.endAt,
+
+          eligibility:
+            sub.eligibility,
+
+          maxParticipants:
+            Number(
+              sub.maxParticipants ||
+                0
+            ),
+
+          entryFee:
+            Number(
+              sub.entryFee || 0
+            ),
+
+          eventManager:
+            sub.eventManager,
+
+          managerPhone:
+            sub.managerPhone,
+
+          prizePool:
+            sub.prizePool,
+
+          createdBy:
+            req.user._id,
+
+          // important
+          status: "pending_review",
+          registrationsClosed:
+  false,
+        });
+      }
+    }
+
+    res.status(201).json({
+      event,
+      message:
+        "Event proposal submitted successfully",
+    });
   });
-
-  res.status(201).json({ event });
-});
-
 export const updateMainEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);
   if (!event) {
@@ -85,7 +224,7 @@ export const updateMainEvent = asyncHandler(async (req, res) => {
     res.status(403);
     throw new Error("You can only edit your own events");
   }
-  if (!["pending", "rejected"].includes(event.status)) {
+  if (!["pending_review", "rejected"].includes(event.status)) {
     res.status(400);
     throw new Error("Approved events cannot be edited (create a new version instead)");
   }
@@ -102,7 +241,7 @@ export const updateMainEvent = asyncHandler(async (req, res) => {
 
   // resubmission clears rejection reason
   if (event.status === "rejected") {
-    event.status = "pending";
+    event.status = "pending_review";
     event.rejectionReason = undefined;
   }
 
@@ -238,22 +377,165 @@ export const createSubevent = asyncHandler(async (req, res) => {
     prizePool,
     posterUrl,
     createdBy: req.user._id,
+    registrationsClosed:
+  false,
   });
 
   res.status(201).json({ subevent });
 });
+export const updateSubevent =
+  asyncHandler(async (req, res) => {
+    const subevent =
+      await Subevent.findById(
+        req.params.id
+      );
 
+    if (!subevent) {
+      res.status(404);
+      throw new Error(
+        "Subevent not found"
+      );
+    }
+
+    // only creator can edit
+    if (
+      subevent.createdBy.toString() !==
+      req.user._id.toString()
+    ) {
+      res.status(403);
+      throw new Error(
+        "Not authorized"
+      );
+    }
+
+    subevent.name =
+      req.body.name ??
+      subevent.name;
+
+    subevent.description =
+      req.body.description ??
+      subevent.description;
+
+    subevent.type =
+      req.body.type ??
+      subevent.type;
+
+    subevent.venue =
+      req.body.venue ??
+      subevent.venue;
+
+    // subevent.startAt =
+    //   req.body.startAt ??
+    //   subevent.startAt;
+    subevent.startAt =
+    req.body.startAt
+      ? new Date(
+          req.body.startAt
+        )
+      : subevent.startAt;
+    // subevent.endAt =
+    //   req.body.endAt ??
+    //   subevent.endAt;
+    subevent.endAt =
+  req.body.endAt
+    ? new Date(
+        req.body.endAt
+      )
+    : subevent.endAt;
+
+    subevent.eligibility =
+      req.body.eligibility ??
+      subevent.eligibility;
+
+    subevent.maxParticipants =
+      req.body.maxParticipants ??
+      subevent.maxParticipants;
+
+    subevent.entryFee =
+      req.body.entryFee ??
+      subevent.entryFee;
+
+    subevent.eventManager =
+      req.body.eventManager ??
+      subevent.eventManager;
+
+    subevent.managerPhone =
+      req.body.managerPhone ??
+      subevent.managerPhone;
+
+    subevent.prizePool =
+      req.body.prizePool ??
+      subevent.prizePool;
+
+    // reset for HOD review
+    subevent.status =
+      "pending_review";
+
+    subevent.rejectionReason =
+      "";
+
+    await subevent.save();
+
+    res.json({
+      message:
+        "Subevent resubmitted successfully",
+      subevent,
+    });
+  });
 // HOD approvals
+// export const listPendingApprovals =
+//   asyncHandler(async (req, res) => {
+
+//     const events =
+//       await Event.find({
+//         status: {
+//           $in: [
+//             "pending",
+//             "cancel_requested",
+//             "reschedule_requested",
+//           ],
+//         },
+//       })
+//         .populate(
+//           "createdBy",
+//           "name email"
+//         )
+//         .sort({
+//           createdAt: -1,
+//         });
+
+//     const subevents =
+//       await Subevent.find({
+//         status: "pending",
+//       })
+//         .populate(
+//           "event",
+//           "name"
+//         )
+//         .populate(
+//           "createdBy",
+//           "name email"
+//         )
+//         .sort({
+//           createdAt: -1,
+//         });
+
+//     res.json({
+//       events,
+//       subevents,
+//     });
+//   });
 export const listPendingApprovals =
   asyncHandler(async (req, res) => {
 
+    // pending event proposals
     const events =
       await Event.find({
         status: {
           $in: [
-            "pending",
+            "pending_review",
+            "revision_requested",
             "cancel_requested",
-            "reschedule_requested",
           ],
         },
       })
@@ -265,13 +547,52 @@ export const listPendingApprovals =
           createdAt: -1,
         });
 
-    const subevents =
+    const proposalPackages =
+      [];
+
+    for (const event of events) {
+
+      // get related subevents
+      const subevents =
+        await Subevent.find({
+          event:
+            event._id,
+
+          status: {
+            $in: [
+              "pending_review",
+              "revision_requested",
+            ],
+          },
+        })
+          .populate(
+            "venue",
+            "name"
+          )
+          .populate(
+            "createdBy",
+            "name email"
+          )
+          .sort({
+            createdAt: 1,
+          });
+
+      proposalPackages.push({
+        event,
+        subevents,
+      });
+    }
+
+    // separately fetch
+    // later-added subevents
+    const pendingSubevents =
       await Subevent.find({
-        status: "pending",
+        status:
+          "pending_review",
       })
         .populate(
           "event",
-          "name"
+          "name status"
         )
         .populate(
           "createdBy",
@@ -282,11 +603,12 @@ export const listPendingApprovals =
         });
 
     res.json({
-      events,
-      subevents,
+      proposals:
+        proposalPackages,
+
+      pendingSubevents,
     });
   });
-
 export const approveEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);
   if (!event) {
@@ -300,7 +622,302 @@ export const approveEvent = asyncHandler(async (req, res) => {
   await event.save();
   res.json({ event });
 });
+// export const reviewEventProposal =
+//   asyncHandler(async (req, res) => {
+//     const {
+//       overallFeedback,
+//       subevents,
+//     } = req.body;
 
+//     const event =
+//       await Event.findById(
+//         req.params.id
+//       );
+
+//     if (!event) {
+//       res.status(404);
+//       throw new Error(
+//         "Event not found"
+//       );
+//     }
+
+//     if (
+//       !Array.isArray(
+//         subevents
+//       )
+//     ) {
+//       res.status(400);
+//       throw new Error(
+//         "Subevent review data required"
+//       );
+//     }
+
+//     let approvedCount = 0;
+//     let revisionCount = 0;
+
+//     // review each subevent
+//     for (const item of subevents) {
+//       const subevent =
+//         await Subevent.findById(
+//           item.subeventId
+//         );
+
+//       if (!subevent)
+//         continue;
+
+//       if (
+//         item.action ===
+//         "approved"
+//       ) {
+//         subevent.status =
+//           "approved";
+
+//         subevent.revisionReason =
+//           "";
+
+//         subevent.reviewedBy =
+//           req.user._id;
+
+//         subevent.reviewedAt =
+//           new Date();
+
+//         subevent.approvedBy =
+//           req.user._id;
+
+//         subevent.approvedAt =
+//           new Date();
+
+//         approvedCount++;
+//       }
+
+//       else if (
+//         item.action ===
+//         "revision_requested"
+//       ) {
+//         subevent.status =
+//           "revision_requested";
+
+//         subevent.revisionReason =
+//           item.reason ||
+//           "Revision requested";
+
+//         subevent.reviewedBy =
+//           req.user._id;
+
+//         subevent.reviewedAt =
+//           new Date();
+
+//         revisionCount++;
+//       }
+
+//       await subevent.save();
+//     }
+
+//     // event status logic
+//     if (
+//       approvedCount > 0 &&
+//       revisionCount > 0
+//     ) {
+//       event.status =
+//         "revision_requested";
+//     }
+
+//     else if (
+//       approvedCount > 0
+//     ) {
+//       event.status =
+//         "approved";
+//     }
+
+//     else {
+//       event.status =
+//         "revision_requested";
+//     }
+
+//     event.hodFeedback =
+//       overallFeedback ||
+//       "";
+
+  //   event.reviewedBy =
+  //     req.user._id;
+
+  //   event.reviewedAt =
+  //     new Date();
+
+  //   await event.save();
+
+  //   res.json({
+  //     message:
+  //       "Proposal reviewed successfully",
+  //     event,
+  //   });
+  // });
+  export const reviewEventProposal =
+  asyncHandler(async (req, res) => {
+    const {
+      overallFeedback,
+      subevents,
+    } = req.body;
+
+    const event =
+      await Event.findById(
+        req.params.id
+      );
+
+    if (!event) {
+      res.status(404);
+      throw new Error(
+        "Event not found"
+      );
+    }
+
+    if (
+      !Array.isArray(
+        subevents
+      )
+    ) {
+      res.status(400);
+      throw new Error(
+        "Subevent review data required"
+      );
+    }
+
+    let approvedCount = 0;
+    let revisionCount = 0;
+
+    // review each subevent
+    for (const item of subevents) {
+      const subevent =
+        await Subevent.findById(
+          item.subeventId
+        );
+
+      if (!subevent)
+        continue;
+
+      // APPROVE
+      if (
+        item.action ===
+        "approved"
+      ) {
+        subevent.status =
+          "approved";
+
+        // clear previous rejection
+        subevent.rejectionReason =
+          "";
+          subevent.hodFeedback = "";
+        subevent.reviewedBy =
+          req.user._id;
+
+        subevent.reviewedAt =
+          new Date();
+
+        subevent.approvedBy =
+          req.user._id;
+
+        subevent.approvedAt =
+          new Date();
+
+        approvedCount++;
+      }
+
+      // REQUEST REVISION
+      // else if (
+      //   item.action ===
+      //   "revision_requested"
+      // ) {
+      //   subevent.status =
+      //     "revision_requested";
+
+      //   // IMPORTANT:
+      //   // save reason correctly
+      //   subevent.rejectionReason =
+      //     item.reason ||
+      //     "Revision requested";
+
+      //   subevent.reviewedBy =
+      //     req.user._id;
+
+      //   subevent.reviewedAt =
+      //     new Date();
+
+      //   revisionCount++;
+      // }
+      else if (
+        item.action ===
+        "revision_requested"
+      ) {
+        subevent.status =
+          "revision_requested";
+      
+        // save revision message
+        subevent.rejectionReason =
+          item.reason ||
+          "Revision requested";
+      
+        // ADD THIS
+        subevent.hodFeedback =
+          item.reason ||
+          "Revision requested";
+      
+        subevent.reviewedBy =
+          req.user._id;
+      
+        subevent.reviewedAt =
+          new Date();
+      
+        revisionCount++;
+      }
+
+      await subevent.save();
+    }
+
+    // EVENT STATUS LOGIC
+
+    // some approved + some rejected
+    if (
+      approvedCount > 0 &&
+      revisionCount > 0
+    ) {
+      event.status =
+        "revision_requested";
+    }
+
+    // all approved
+    else if (
+      approvedCount > 0 &&
+      revisionCount === 0
+    ) {
+      event.status =
+        "approved";
+    }
+
+    // all revision requested
+    else {
+      event.status =
+        "revision_requested";
+    }
+
+    // save overall HOD feedback
+    event.hodFeedback =
+      overallFeedback ||
+      "";
+
+    event.reviewedBy =
+      req.user._id;
+
+    event.reviewedAt =
+      new Date();
+
+    await event.save();
+
+    res.json({
+      message:
+        "Proposal reviewed successfully",
+      event,
+    });
+  });
 export const rejectEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);
   if (!event) {
@@ -379,6 +996,47 @@ export const requestCancellation =
       event,
     });
   });
+  // export const approveCancellation =
+  // asyncHandler(async (req, res) => {
+  //   const event =
+  //     await Event.findById(
+  //       req.params.id
+  //     );
+
+  //   if (!event) {
+  //     res.status(404);
+  //     throw new Error(
+  //       "Event not found"
+  //     );
+  //   }
+
+  //   if (
+  //     event.status !==
+  //     "cancel_requested"
+  //   ) {
+  //     res.status(400);
+  //     throw new Error(
+  //       "No cancellation request found"
+  //     );
+  //   }
+
+  //   event.status =
+  //     "cancelled";
+
+  //   event.approvedBy =
+  //     req.user._id;
+
+  //   event.approvedAt =
+  //     new Date();
+
+  //   await event.save();
+
+  //   res.json({
+  //     message:
+  //       "Event cancelled successfully",
+  //     event,
+  //   });
+  // });
   export const approveCancellation =
   asyncHandler(async (req, res) => {
     const event =
@@ -403,6 +1061,256 @@ export const requestCancellation =
       );
     }
 
+    // get all approved subevents
+    const subevents =
+      await Subevent.find({
+        event: event._id,
+        status: "approved",
+      }).populate(
+        "venue",
+        "name location"
+      );
+
+    // send emails BEFORE save response
+    for (const subevent of subevents) {
+      const registrations =
+        await Registration.find({
+          subevent:
+            subevent._id,
+        }).populate(
+          "participant",
+          "name email"
+        );
+
+      for (const reg of registrations) {
+        const participant =
+          reg.participant;
+
+        if (
+          !participant?.email
+        )
+          continue;
+
+        const formattedDate =
+          subevent.startAt
+            ? new Date(
+                subevent.startAt
+              ).toLocaleDateString(
+                "en-IN",
+                {
+                  weekday:
+                    "long",
+                  day: "numeric",
+                  month:
+                    "long",
+                  year:
+                    "numeric",
+                }
+              )
+            : "TBA";
+
+        const formattedTime =
+          subevent.startAt
+            ? new Date(
+                subevent.startAt
+              ).toLocaleTimeString(
+                "en-IN",
+                {
+                  hour:
+                    "2-digit",
+                  minute:
+                    "2-digit",
+                }
+              )
+            : "TBA";
+
+        await sendEmail({
+          to:
+            participant.email,
+
+          subject: `❌ Event Cancelled - ${subevent.name}`,
+
+          html: `
+          <div style="
+            font-family:Arial,sans-serif;
+            background:#f4f6f9;
+            padding:30px;
+          ">
+
+            <div style="
+              max-width:650px;
+              margin:auto;
+              background:white;
+              border-radius:16px;
+              overflow:hidden;
+              box-shadow:0 4px 15px rgba(0,0,0,0.1);
+            ">
+
+              <div style="
+                background:#dc2626;
+                color:white;
+                padding:25px;
+                text-align:center;
+              ">
+                <h1>
+                  Event Cancelled
+                </h1>
+
+                <p>
+                  CSEA Event Management
+                </p>
+              </div>
+
+              <div style="
+                padding:30px;
+              ">
+
+                <p>
+                  Hello
+                  <b>
+                    ${
+                      participant.name
+                    }
+                  </b>,
+                </p>
+
+                <p>
+                  We regret to inform
+                  you that the
+                  following event
+                  has been cancelled.
+                </p>
+
+                <div style="
+                  background:#f8fafc;
+                  border:1px solid #e5e7eb;
+                  border-radius:12px;
+                  padding:20px;
+                ">
+
+                  <h2>
+                    ${
+                      subevent.name
+                    }
+                  </h2>
+
+                  <p>
+                    <b>
+                      📌 Main Event:
+                    </b>
+                    ${
+                      event.name
+                    }
+                  </p>
+
+                  <p>
+                    <b>
+                      📅 Date:
+                    </b>
+                    ${
+                      formattedDate
+                    }
+                  </p>
+
+                  <p>
+                    <b>
+                      ⏰ Time:
+                    </b>
+                    ${
+                      formattedTime
+                    }
+                  </p>
+
+                  <p>
+                    <b>
+                      📍 Venue:
+                    </b>
+                    ${
+                      subevent
+                        .venue
+                        ?.name ||
+                      "TBA"
+                    }
+                  </p>
+
+                  <p>
+                    <b>
+                      ❗ Cancellation Reason:
+                    </b>
+                    ${
+                      event.cancelReason ||
+                      "Not specified"
+                    }
+                  </p>
+                </div>
+
+                <br>
+
+                <div style="
+                  background:#eff6ff;
+                  border-left:4px solid #2563eb;
+                  padding:15px;
+                  border-radius:8px;
+                ">
+
+                  <h3>
+                    👨‍💼 Event Manager Details
+                  </h3>
+
+                  <p>
+                    <b>
+                      Name:
+                    </b>
+                    ${
+                      subevent.eventManager ||
+                      "Event Manager"
+                    }
+                  </p>
+
+                  <p>
+                    <b>
+                      Phone:
+                    </b>
+                    ${
+                      subevent.managerPhone ||
+                      "N/A"
+                    }
+                  </p>
+
+                </div>
+
+                <br>
+
+                <p>
+                  We sincerely
+                  apologize for
+                  the inconvenience.
+                </p>
+
+                <p>
+                  Please stay tuned
+                  for future updates
+                  or rescheduled
+                  opportunities.
+                </p>
+
+                <p>
+                  Regards,
+                  <br>
+                  <b>
+                    CSEA Event Team
+                  </b>
+                </p>
+
+              </div>
+            </div>
+          </div>
+          `,
+        });
+      }
+    }
+
+    // approve cancellation
     event.status =
       "cancelled";
 
@@ -416,7 +1324,7 @@ export const requestCancellation =
 
     res.json({
       message:
-        "Event cancelled successfully",
+        "Event cancelled successfully and emails sent",
       event,
     });
   });

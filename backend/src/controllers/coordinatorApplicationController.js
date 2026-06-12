@@ -5,7 +5,7 @@ import { sendEmail } from "../utils/email.js";
 
 export const submitCoordinatorApplication = asyncHandler(async (req, res) => {
   const existing = await CoordinatorApplication.findOne({ applicant: req.user._id });
-  if (existing && existing.status === "pending") {
+  if (existing && existing.status === "pending_review") {
     res.status(400);
     throw new Error("Application already submitted and pending");
   }
@@ -21,7 +21,7 @@ export const submitCoordinatorApplication = asyncHandler(async (req, res) => {
     cgpa: req.body.cgpa,
     achievements: req.body.achievements,
     visionForEvent: req.body.visionForEvent,
-    status: "pending",
+    status: "pending_review",
     rejectionReason: undefined,
   };
 

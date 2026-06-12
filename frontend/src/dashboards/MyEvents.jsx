@@ -5,6 +5,14 @@ import { useNavigate } from "react-router-dom";
 
 export default function MyEvents() {
   const [events, setEvents] = useState([]);
+  const [
+    editingSubevent,
+    setEditingSubevent,
+  ] = useState(null);
+  const [
+    editAvailability,
+    setEditAvailability,
+  ] = useState(null);
   const navigate =
   useNavigate();
   const [venues, setVenues] = useState([]);
@@ -33,6 +41,30 @@ export default function MyEvents() {
     const [{ data: e }, { data: v }] = await Promise.all([api.get("/events/me/list"), api.get("/venues")]);
     setEvents(e.events || []);
     setVenues(v.venues || []);
+  };
+  // const openEditSubevent =
+  // (subevent) => {
+  //   setEditingSubevent({
+  //     ...subevent,
+  //   });
+  // };
+  const openEditSubevent =
+  (subevent) => {
+    setEditingSubevent({
+      ...subevent,
+
+      venue:
+        subevent.venue?._id ||
+        subevent.venue,
+
+      startAt:
+        subevent.startAt
+          ?.slice(0, 16),
+
+      endAt:
+        subevent.endAt
+          ?.slice(0, 16),
+    });
   };
   const openAttendance =
   async (eventId) => {
@@ -168,9 +200,103 @@ const closeAttendance =
           subForm.endAt
         )}`
       );
+      const checkEditAvailability =
+  async () => {
+    if (
+      !editingSubevent
+        ?.venue ||
+      !editingSubevent
+        ?.startAt ||
+      !editingSubevent
+        ?.endAt
+    )
+      return;
+
+    try {
+      const {
+        data,
+      } =
+        await api.get(
+          `/venues/availability?venueId=${editingSubevent.venue}&startAt=${encodeURIComponent(
+            editingSubevent.startAt
+          )}&endAt=${encodeURIComponent(
+            editingSubevent.endAt
+          )}`
+        );
+
+      setEditAvailability(
+        data
+      );
+    } catch (err) {
+      setEditAvailability(
+        {
+          error:
+            err
+              ?.response
+              ?.data
+              ?.message ||
+            "Failed",
+        }
+      );
+    }
+  };
       setAvailability(data);
     } catch (err) {
       setAvailability({ error: err?.response?.data?.message || "Failed" });
+    }
+  };
+  const checkEditAvailability =
+  async () => {
+    if (
+      !editingSubevent
+        ?.venue ||
+      !editingSubevent
+        ?.startAt ||
+      !editingSubevent
+        ?.endAt
+    ) {
+      toast.error(
+        "Select venue, start and end time first"
+      );
+      return;
+    }
+
+    try {
+      const {
+        data,
+      } =
+        await api.get(
+          `/venues/availability?venueId=${editingSubevent.venue}&startAt=${encodeURIComponent(
+            editingSubevent.startAt
+          )}&endAt=${encodeURIComponent(
+            editingSubevent.endAt
+          )}`
+        );
+
+      setEditAvailability(
+        data
+      );
+
+      if (
+        data
+          ?.conflicts
+          ?.length
+      ) {
+        toast.error(
+          "Venue conflict found"
+        );
+      } else {
+        toast.success(
+          "Venue available"
+        );
+      }
+    } catch (err) {
+      toast.error(
+        err?.response
+          ?.data
+          ?.message ||
+          "Failed to check venue"
+      );
     }
   };
   const loadRegistrations = async (
@@ -271,7 +397,37 @@ const closeAttendance =
       toast.error(err?.response?.data?.message || "Failed");
     }
   };
+  const resubmitSubevent =
+  async () => {
+    try {
+      // await api.put(
+      //   `/subevents/${editingSubevent._id}`,
+      api.put(
+        `/events/subevents/${editingSubevent._id}`,
+        {
+          ...editingSubevent,
+          status:
+            "pending_review",
+        }
+      );
 
+      toast.success(
+        "Subevent resubmitted to HOD"
+      );
+
+      setEditingSubevent(
+        null
+      );
+
+      await load();
+    } catch (err) {
+      toast.error(
+        err?.response?.data
+          ?.message ||
+          "Failed"
+      );
+    }
+  };
   return (
     <div className="space-y-4">
       <div className="flex items-end justify-between">
@@ -339,6 +495,19 @@ const closeAttendance =
       ? ` • Reason: ${e.rejectionReason}`
       : ""}
   </p>
+  {e.hodFeedback && (
+  <div className="mt-3 rounded-md border border-yellow-500 bg-yellow-950/20 p-3">
+    <p className="font-semibold text-yellow-400">
+      HOD Feedback
+    </p>
+
+    <p className="text-sm text-slate-300">
+      {
+        e.hodFeedback
+      }
+    </p>
+  </div>
+)}
 
   <div className="mt-3">
   <span
@@ -447,7 +616,175 @@ const closeAttendance =
 </div>
 
       </div>
+      {creatingFor ===
+  e._id && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <p className="font-semibold text-slate-900 dark:text-white">Create Subevent</p>
+            <button className="text-sm text-slate-600 hover:underline dark:text-slate-300" onClick={() => setCreatingFor(null)}>
+              Close
+            </button>
+          </div>
 
+          <form onSubmit={onCreateSubevent} className="mt-4 grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium">Type</label>
+              <select
+                value={subForm.type}
+                onChange={(e) => setSubForm((f) => ({ ...f, type: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              >
+                <option value="workshop">Workshop</option>
+                <option value="competitive">Competitive</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Venue</label>
+              <select
+                value={subForm.venue}
+                onChange={(e) => setSubForm((f) => ({ ...f, venue: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              >
+                <option value="">Select venue</option>
+                {venues.map((v) => (
+                  <option key={v._id} value={v._id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium">Subevent Name</label>
+              <input
+                value={subForm.name}
+                onChange={(e) => setSubForm((f) => ({ ...f, name: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+                required
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={subForm.description}
+                onChange={(e) => setSubForm((f) => ({ ...f, description: e.target.value }))}
+                rows={3}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Start</label>
+              <input
+                type="datetime-local"
+                value={subForm.startAt}
+                onChange={(e) => setSubForm((f) => ({ ...f, startAt: e.target.value }))}
+                onBlur={checkAvailability}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">End</label>
+              <input
+                type="datetime-local"
+                value={subForm.endAt}
+                onChange={(e) => setSubForm((f) => ({ ...f, endAt: e.target.value }))}
+                onBlur={checkAvailability}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+                required
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <button
+                type="button"
+                onClick={checkAvailability}
+                className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
+              >
+                Check venue availability
+              </button>
+              {availability?.conflicts?.length ? (
+                <p className="mt-2 text-sm text-red-600">
+                  Conflict! This slot is already booked. Try another venue/time.
+                </p>
+              ) : availability && !availability.error ? (
+                <p className="mt-2 text-sm text-emerald-600">No conflicts for selected venue.</p>
+              ) : null}
+              {availability?.suggestedAlternateVenues?.length ? (
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  Suggested alternate venues: {availability.suggestedAlternateVenues.map((v) => v.name).join(", ")}
+                </p>
+              ) : null}
+              {availability?.error ? <p className="mt-2 text-sm text-red-600">{availability.error}</p> : null}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Eligibility</label>
+              <input
+                value={subForm.eligibility}
+                onChange={(e) => setSubForm((f) => ({ ...f, eligibility: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Max participants</label>
+              <input
+                value={subForm.maxParticipants}
+                onChange={(e) => setSubForm((f) => ({ ...f, maxParticipants: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Entry fee (₹)</label>
+              <input
+                value={subForm.entryFee}
+                onChange={(e) => setSubForm((f) => ({ ...f, entryFee: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Poster</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSubPoster(e.target.files?.[0] || null)}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Event manager</label>
+              <input
+                value={subForm.eventManager}
+                onChange={(e) => setSubForm((f) => ({ ...f, eventManager: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Manager phone</label>
+              <input
+                value={subForm.managerPhone}
+                onChange={(e) => setSubForm((f) => ({ ...f, managerPhone: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium">Prize pool</label>
+              <input
+                value={subForm.prizePool}
+                onChange={(e) => setSubForm((f) => ({ ...f, prizePool: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              />
+            </div>
+
+            <button
+              className="md:col-span-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              Create Subevent
+            </button>
+          </form>
+        </div>
+      )}
       {/* Subevents */}
       <div className="mt-4 space-y-3">
         {e.subevents?.map(
@@ -460,11 +797,31 @@ const closeAttendance =
                 {sub.name}
               </p>
 
-              <p className="text-sm text-slate-500">
+              {/* <p className="text-sm text-slate-500">
                 {sub.type} •{" "}
                 {sub.status}
               </p>
-              
+               */}
+               <p className="text-sm text-slate-500">
+  {sub.type} •{" "}
+
+  <span
+    className={`font-semibold ${
+      sub.status ===
+      "approved"
+        ? "text-green-500"
+        : sub.status ===
+          "revision_requested"
+        ? "text-red-500"
+        : sub.status ===
+          "pending_review"
+        ? "text-yellow-500"
+        : "text-slate-400"
+    }`}
+  >
+    {sub.status}
+  </span>
+</p>
 {/* <div className="mt-4 flex flex-wrap items-center gap-3">
 
   <button
@@ -587,6 +944,44 @@ const closeAttendance =
   </div>
 
 </div> */}
+{sub.status ===
+  "revision_requested" &&
+//   sub.rejectionReason && (
+//     <div className="mb-4 rounded-md border border-red-500 bg-red-950/20 p-3">
+//       <p className="font-semibold text-red-400">
+//         HOD Revision Reason
+//       </p>
+
+//       <p className="text-sm text-slate-300">
+//         {
+//           sub.rejectionReason
+//         }
+//       </p>
+//     </div>
+// )
+<div className="space-y-2">
+  <p className="font-semibold text-red-400">
+    HOD Revision Message
+  </p>
+
+  <p className="text-sm text-slate-300">
+  {sub.hodFeedback ||
+ sub.rejectionReason ||
+ "No feedback"}
+  </p>
+
+  {e.hodFeedback && (
+    <div className="rounded-md border border-yellow-600 bg-yellow-950/20 p-3">
+      <p className="font-semibold text-yellow-300">
+        Event Feedback
+      </p>
+
+      <p className="text-sm text-slate-300">
+        {e.hodFeedback}
+      </p>
+    </div>
+  )}
+</div>}
 <div className="mt-4 flex flex-wrap items-center gap-3">
 
 {/* View Feedback */}
@@ -600,7 +995,503 @@ const closeAttendance =
 >
   View Feedback
 </button>
+{sub.status ===
+  "revision_requested" && (
+  <button
+    onClick={() =>
+      openEditSubevent(
+        sub
+      )
+    }
+    className="rounded-xl bg-yellow-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-yellow-600"
+  >
+    Edit &
+    Resubmit
+  </button>
+  
+)}
+      {editingSubevent?._id ===
+  sub._id && (
+    <div className="mt-4 grid gap-4 md:grid-cols-2">
 
+  {/* HOD FEEDBACK */}
+  <div className="md:col-span-2 rounded-md border border-red-500 bg-red-950/20 p-4">
+    <p className="font-semibold text-red-400">
+      HOD Revision Message
+    </p>
+
+    <p className="mt-1 text-sm text-slate-300">
+    {editingSubevent.hodFeedback ||
+ editingSubevent.rejectionReason ||
+ "No feedback"}
+    </p>
+  </div>
+
+  {/* TYPE */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Type
+    </label>
+
+    <select
+      value={editingSubevent.type}
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          type: e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    >
+      <option value="workshop">
+        Workshop
+      </option>
+
+      <option value="competitive">
+        Competitive
+      </option>
+    </select>
+  </div>
+
+  {/* VENUE */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Venue
+    </label>
+
+    <select
+      value={editingSubevent.venue}
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          venue: e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    >
+      <option value="">
+        Select venue
+      </option>
+
+      {venues.map((v) => (
+        <option
+          key={v._id}
+          value={v._id}
+        >
+          {v.name}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* NAME */}
+  <div className="md:col-span-2">
+    <label className="text-sm font-medium text-white">
+      Subevent Name
+    </label>
+
+    <input
+      value={editingSubevent.name || ""}
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          name: e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* DESCRIPTION */}
+  <div className="md:col-span-2">
+    <label className="text-sm font-medium text-white">
+      Description
+    </label>
+
+    <textarea
+      rows={3}
+      value={
+        editingSubevent.description || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          description:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* START */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Start
+    </label>
+
+    <input
+      type="datetime-local"
+      value={
+        editingSubevent.startAt || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          startAt:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* END */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      End
+    </label>
+
+    <input
+      type="datetime-local"
+      value={
+        editingSubevent.endAt || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          endAt:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* CHECK VENUE */}
+  <div className="md:col-span-2">
+    <button
+      type="button"
+      onClick={
+        checkEditAvailability
+      }
+      className="rounded-md border border-slate-500 px-4 py-2 text-white"
+    >
+      Check Venue Availability
+    </button>
+  </div>
+
+  {/* ELIGIBILITY */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Eligibility
+    </label>
+
+    <input
+      value={
+        editingSubevent.eligibility || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          eligibility:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* MAX PARTICIPANTS */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Max Participants
+    </label>
+
+    <input
+      value={
+        editingSubevent.maxParticipants || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          maxParticipants:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* ENTRY FEE */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Entry Fee
+    </label>
+
+    <input
+      value={
+        editingSubevent.entryFee || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          entryFee:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* EVENT MANAGER */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Event Manager
+    </label>
+
+    <input
+      value={
+        editingSubevent.eventManager || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          eventManager:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* PHONE */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Manager Phone
+    </label>
+
+    <input
+      value={
+        editingSubevent.managerPhone || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          managerPhone:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* PRIZE POOL */}
+  <div>
+    <label className="text-sm font-medium text-white">
+      Prize Pool
+    </label>
+
+    <input
+      value={
+        editingSubevent.prizePool || ""
+      }
+      onChange={(e) =>
+        setEditingSubevent((prev) => ({
+          ...prev,
+          prizePool:
+            e.target.value,
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+    />
+  </div>
+
+  {/* RESUBMIT */}
+  <div className="md:col-span-2">
+    <button
+      onClick={
+        resubmitSubevent
+      }
+      className="rounded-md bg-yellow-500 px-4 py-2 text-white hover:bg-yellow-600"
+    >
+      Resubmit to HOD
+    </button>
+  </div>
+</div>
+  // <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+  //   <div className="flex items-center justify-between">
+  //     <p className="font-semibold text-slate-900 dark:text-white">
+  //       Edit & Resubmit
+  //     </p>
+
+  //     <button
+  //       onClick={() =>
+  //         setEditingSubevent(
+  //           null
+  //         )
+  //       }
+  //     >
+  //       Close
+  //     </button>
+  //   </div>
+
+  //   <div className="mt-4 grid gap-4 md:grid-cols-2">
+
+  //     <div>
+  //       <label>
+  //         Subevent Name
+  //       </label>
+
+  //       <input
+  //         value={
+  //           editingSubevent.name
+  //         }
+  //         onChange={(e) =>
+  //           setEditingSubevent(
+  //             (
+  //               prev
+  //             ) => ({
+  //               ...prev,
+  //               name:
+  //                 e
+  //                   .target
+  //                   .value,
+  //             })
+  //           )
+  //         }
+  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
+  //       />
+  //     </div>
+
+  //     <div>
+  //       <label>
+  //         Venue
+  //       </label>
+
+  //       <select
+  //         value={
+  //           editingSubevent.venue
+  //         }
+  //         onChange={(e) =>
+  //           setEditingSubevent(
+  //             (
+  //               prev
+  //             ) => ({
+  //               ...prev,
+  //               venue:
+  //                 e
+  //                   .target
+  //                   .value,
+  //             })
+  //           )
+  //         }
+  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
+  //       >
+  //         <option value="">
+  //           Select venue
+  //         </option>
+
+  //         {venues.map(
+  //           (v) => (
+  //             <option
+  //               key={
+  //                 v._id
+  //               }
+  //               value={
+  //                 v._id
+  //               }
+  //             >
+  //               {
+  //                 v.name
+  //               }
+  //             </option>
+  //           )
+  //         )}
+  //       </select>
+  //     </div>
+
+  //     <div>
+  //       <label>
+  //         Start
+  //       </label>
+
+  //       <input
+  //         type="datetime-local"
+  //         value={
+  //           editingSubevent.startAt
+  //         }
+  //         onChange={(e) =>
+  //           setEditingSubevent(
+  //             (
+  //               prev
+  //             ) => ({
+  //               ...prev,
+  //               startAt:
+  //                 e
+  //                   .target
+  //                   .value,
+  //             })
+  //           )
+  //         }
+  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
+  //       />
+  //     </div>
+
+  //     <div>
+  //       <label>
+  //         End
+  //       </label>
+
+  //       <input
+  //         type="datetime-local"
+  //         value={
+  //           editingSubevent.endAt
+  //         }
+  //         onChange={(e) =>
+  //           setEditingSubevent(
+  //             (
+  //               prev
+  //             ) => ({
+  //               ...prev,
+  //               endAt:
+  //                 e
+  //                   .target
+  //                   .value,
+  //             })
+  //           )
+  //         }
+  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
+  //       />
+  //     </div>
+
+  //     <div className="md:col-span-2">
+  //       <button
+  //         type="button"
+  //         onClick={
+  //           checkEditAvailability
+  //         }
+  //         className="rounded-md border px-4 py-2"
+  //       >
+  //         Check Venue
+  //       </button>
+  //     </div>
+
+  //     <div className="md:col-span-2">
+  //       <button
+  //         onClick={
+  //           resubmitSubevent
+  //         }
+  //         className="rounded-md bg-yellow-500 px-4 py-2 text-white"
+  //       >
+  //         Resubmit to
+  //         HOD
+  //       </button>
+  //     </div>
+  //   </div>
+  // </div>
+
+)}
 {/* Load Participants */}
 <button
   onClick={() =>
@@ -875,174 +1766,8 @@ const closeAttendance =
   )}
 </div>
 
-      {creatingFor && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-slate-900 dark:text-white">Create Subevent</p>
-            <button className="text-sm text-slate-600 hover:underline dark:text-slate-300" onClick={() => setCreatingFor(null)}>
-              Close
-            </button>
-          </div>
+      
 
-          <form onSubmit={onCreateSubevent} className="mt-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium">Type</label>
-              <select
-                value={subForm.type}
-                onChange={(e) => setSubForm((f) => ({ ...f, type: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              >
-                <option value="workshop">Workshop</option>
-                <option value="competitive">Competitive</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Venue</label>
-              <select
-                value={subForm.venue}
-                onChange={(e) => setSubForm((f) => ({ ...f, venue: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              >
-                <option value="">Select venue</option>
-                {venues.map((v) => (
-                  <option key={v._id} value={v._id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Subevent Name</label>
-              <input
-                value={subForm.name}
-                onChange={(e) => setSubForm((f) => ({ ...f, name: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Description</label>
-              <textarea
-                value={subForm.description}
-                onChange={(e) => setSubForm((f) => ({ ...f, description: e.target.value }))}
-                rows={3}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Start</label>
-              <input
-                type="datetime-local"
-                value={subForm.startAt}
-                onChange={(e) => setSubForm((f) => ({ ...f, startAt: e.target.value }))}
-                onBlur={checkAvailability}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">End</label>
-              <input
-                type="datetime-local"
-                value={subForm.endAt}
-                onChange={(e) => setSubForm((f) => ({ ...f, endAt: e.target.value }))}
-                onBlur={checkAvailability}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-                required
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <button
-                type="button"
-                onClick={checkAvailability}
-                className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
-              >
-                Check venue availability
-              </button>
-              {availability?.conflicts?.length ? (
-                <p className="mt-2 text-sm text-red-600">
-                  Conflict! This slot is already booked. Try another venue/time.
-                </p>
-              ) : availability && !availability.error ? (
-                <p className="mt-2 text-sm text-emerald-600">No conflicts for selected venue.</p>
-              ) : null}
-              {availability?.suggestedAlternateVenues?.length ? (
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                  Suggested alternate venues: {availability.suggestedAlternateVenues.map((v) => v.name).join(", ")}
-                </p>
-              ) : null}
-              {availability?.error ? <p className="mt-2 text-sm text-red-600">{availability.error}</p> : null}
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Eligibility</label>
-              <input
-                value={subForm.eligibility}
-                onChange={(e) => setSubForm((f) => ({ ...f, eligibility: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Max participants</label>
-              <input
-                value={subForm.maxParticipants}
-                onChange={(e) => setSubForm((f) => ({ ...f, maxParticipants: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Entry fee (₹)</label>
-              <input
-                value={subForm.entryFee}
-                onChange={(e) => setSubForm((f) => ({ ...f, entryFee: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Poster</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setSubPoster(e.target.files?.[0] || null)}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Event manager</label>
-              <input
-                value={subForm.eventManager}
-                onChange={(e) => setSubForm((f) => ({ ...f, eventManager: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Manager phone</label>
-              <input
-                value={subForm.managerPhone}
-                onChange={(e) => setSubForm((f) => ({ ...f, managerPhone: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Prize pool</label>
-              <input
-                value={subForm.prizePool}
-                onChange={(e) => setSubForm((f) => ({ ...f, prizePool: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-
-            <button
-              className="md:col-span-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              Create Subevent
-            </button>
-          </form>
-        </div>
-      )}
     </div>
   );
 }
