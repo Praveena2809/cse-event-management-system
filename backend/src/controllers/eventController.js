@@ -9,11 +9,17 @@ import { Registration }
  
 import { User }
   from "../models/User.js";
-  import { sendEmail }
-  from "../utils/email.js";
+  import { sendEmail } from "../utils/email.js";
+
+import {
+  eventApprovalTemplate,
+  eventRejectionTemplate,
+} from "../templates/emailTemplates.js";
+
 const isOverlapping = (aStart, aEnd, bStart, bEnd) => {
   return aStart < bEnd && bStart < aEnd;
 };
+
 
 // Public: approved events + approved subevents (used on Home page)
 export const listPublicEvents = asyncHandler(async (req, res) => {
@@ -620,6 +626,46 @@ export const approveEvent = asyncHandler(async (req, res) => {
   event.approvedBy = req.user._id;
   event.approvedAt = new Date();
   await event.save();
+  try {
+    const coordinator =
+      await User.findById(
+        event.createdBy
+      );
+  
+    if (coordinator?.email) {
+      await sendEmail({
+        to: coordinator.email,
+  
+        subject:
+          "Event Proposal Approved - CSEA Event System",
+  
+        html:
+          eventApprovalTemplate({
+            coordinatorName:
+              coordinator.name,
+  
+            eventName:
+              event.name,
+  
+            eventType:
+              "Main Event",
+  
+            date:
+              new Date(
+                event.date
+              ).toLocaleDateString(),
+  
+            venue:
+              "See subevent details",
+          }),
+      });
+    }
+  } catch (error) {
+    console.log(
+      "Event approval email failed:",
+      error.message
+    );
+  }
   res.json({ event });
 });
 // export const reviewEventProposal =
@@ -929,12 +975,64 @@ export const rejectEvent = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Rejection reason is required");
   }
-  event.status = "rejected";
-  event.rejectionReason = reason;
-  event.approvedBy = req.user._id;
-  event.approvedAt = new Date();
-  await event.save();
-  res.json({ event });
+  // event.status = "rejected";
+  // event.rejectionReason = reason;
+  // event.approvedBy = req.user._id;
+  // event.approvedAt = new Date();
+  // await event.save();
+  // res.json({ event });
+  event.status =
+  "rejected";
+
+event.rejectionReason =
+  reason;
+
+event.approvedBy =
+  req.user._id;
+
+event.approvedAt =
+  new Date();
+
+await event.save();
+
+try {
+  const coordinator =
+    await User.findById(
+      event.createdBy
+    );
+
+  if (
+    coordinator?.email
+  ) {
+    await sendEmail({
+      to:
+        coordinator.email,
+
+      subject:
+        "Event Proposal Rejected - CSEA Event System",
+
+      html:
+        eventRejectionTemplate({
+          coordinatorName:
+            coordinator.name,
+
+          eventName:
+            event.name,
+
+          reason,
+        }),
+    });
+  }
+} catch (error) {
+  console.log(
+    "Event rejection email failed:",
+    error.message
+  );
+}
+
+res.json({
+  event,
+});
 });
 
 export const requestCancellation =

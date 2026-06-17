@@ -3,6 +3,11 @@ import { CoordinatorApplication } from "../models/CoordinatorApplication.js";
 import { User } from "../models/User.js";
 import { sendEmail } from "../utils/email.js";
 
+import {
+  coordinatorApprovalTemplate,
+  coordinatorRejectionTemplate,
+} from "../templates/emailTemplates.js";
+
 export const submitCoordinatorApplication = asyncHandler(async (req, res) => {
   const existing = await CoordinatorApplication.findOne({ applicant: req.user._id });
   if (existing && existing.status === "pending_review") {
@@ -67,10 +72,11 @@ export const approveApplication = asyncHandler(async (req, res) => {
   try {
     await sendEmail({
       to: user.email,
-      subject: "Coordinator Access Approved - CSE Event System",
-      html: `<p>Hello ${user.name},</p>
-        <p>Your Coordinator application has been approved by HOD.</p>
-        <p>You can now login with your <b>existing email and password</b> and access the Coordinator dashboard.</p>`,
+      subject:
+        "Coordinator Application Approved - CSEA Event System",
+      html: coordinatorApprovalTemplate({
+        name: user.name,
+      }),
     });
   } catch (e) {
     // ignore in dev
@@ -98,6 +104,28 @@ export const rejectApplication = asyncHandler(async (req, res) => {
   app.reviewedAt = new Date();
   await app.save();
 
+  const user = await User.findById(
+    app.applicant
+  );
+  
+  try {
+    await sendEmail({
+      to: user.email,
+      subject:
+        "Coordinator Application Rejected - CSEA Event System",
+      html:
+        coordinatorRejectionTemplate({
+          name: user.name,
+          reason,
+        }),
+    });
+  } catch (error) {
+    console.log(
+      "Rejection email failed:",
+      error.message
+    );
+  }
+  
   res.json({ application: app });
 });
 
