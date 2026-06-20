@@ -33,9 +33,12 @@ export default function VerifyEmail() {
         {status === "verifying" ? "Verifying..." : message}
       </p>
       <div className="mt-5">
-        <Link to="/login" className="text-indigo-600 hover:underline">
-          Go to login
-        </Link>
+      <Link
+  to="/login/participant"
+  className="text-indigo-600 hover:underline"
+>
+  Go to Login
+</Link>
       </div>
     </div>
   );

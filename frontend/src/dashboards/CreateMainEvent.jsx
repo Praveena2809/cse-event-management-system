@@ -134,6 +134,8 @@ export default function CreateMainEvent() {
     budgetEstimate: "",
     numberOfSubevents: "",
     miscNotesForHod: "",
+  
+   
   });
 
   const [poster, setPoster] = useState(null);
@@ -184,6 +186,12 @@ const [availabilityMap,
       managerPhone: "",
       prizePool: "",
       poster:null,
+      totalSessions: 1,
+
+certificateSettings: {
+  mode: "attendance_once",
+  minimumPercentage: 80,
+},
     },
   ]);
   const onChange = (e) => {
@@ -209,6 +217,12 @@ const [availabilityMap,
         managerPhone: "",
         prizePool: "",
         poster: null,
+        totalSessions: 1,
+
+certificateSettings: {
+  mode: "attendance_once",
+  minimumPercentage: 80,
+},
       },
     ]);
   };
@@ -304,9 +318,16 @@ const [availabilityMap,
     try {
       const fd = new FormData();
 
-      Object.entries(form).forEach(([k, v]) =>
-        fd.append(k, v)
-      );
+      Object.entries(form).forEach(([k, v]) => {
+        if (k === "certificateSettings") {
+          fd.append(
+            "certificateSettings",
+            JSON.stringify(v)
+          );
+        } else {
+          fd.append(k, v);
+        }
+      });
       const cleanedSubevents =
   subevents.map((s) => ({
     ...s,
@@ -329,7 +350,7 @@ fd.append(
       if (poster) {
         fd.append("poster", poster);
       }
-
+      console.log(subevents);
       await api.post("/events", fd, {
         headers: {
           "Content-Type":
@@ -470,6 +491,8 @@ fd.append(
             className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
         </div>
+
+
 
         {/* Poster Upload */}
         <div>
@@ -953,6 +976,85 @@ fd.append(
     className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
   />
 </div>
+<div>
+  <label className="text-sm font-medium">
+    Total Sessions / Days
+  </label>
+
+  <input
+    type="number"
+    min="1"
+    value={s.totalSessions}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "totalSessions",
+        Number(e.target.value)
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black"
+  />
+</div>
+
+<div>
+  <label className="text-sm font-medium">
+    Certificate Eligibility
+  </label>
+
+  <select
+    value={s.certificateSettings.mode}
+    onChange={(e) =>
+      updateSubevent(
+        index,
+        "certificateSettings",
+        {
+          ...s.certificateSettings,
+          mode: e.target.value,
+        }
+      )
+    }
+    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black"
+  >
+    <option value="attendance_once">
+      Attend at least one session
+    </option>
+
+    <option value="attendance_percentage">
+      Minimum attendance percentage
+    </option>
+  </select>
+</div>
+
+{s.certificateSettings.mode ===
+  "attendance_percentage" && (
+  <div>
+    <label className="text-sm font-medium">
+      Required Attendance %
+    </label>
+
+    <input
+      type="number"
+      min="1"
+      max="100"
+      value={
+        s.certificateSettings
+          .minimumPercentage
+      }
+      onChange={(e) =>
+        updateSubevent(
+          index,
+          "certificateSettings",
+          {
+            ...s.certificateSettings,
+            minimumPercentage:
+              Number(e.target.value),
+          }
+        )
+      }
+      className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black"
+    />
+  </div>
+)}
           {/* <input
             placeholder="Event Manager"
             value={

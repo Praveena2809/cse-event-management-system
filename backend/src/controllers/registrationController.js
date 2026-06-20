@@ -1266,9 +1266,20 @@ export const getSubeventRegistrations =
   // });
   export const markAttendanceByQr =
   asyncHandler(async (req, res) => {
-    const { qrToken } =
-      req.body;
-
+    const {
+      qrToken,
+      sessionNumber,
+    } = req.body;
+    if (
+      !sessionNumber ||
+      Number(sessionNumber) < 1
+    ) {
+      res.status(400);
+    
+      throw new Error(
+        "Valid session number is required"
+      );
+    }
     // const registration =
     //   await Registration.findOne(
     //     { qrToken }
@@ -1292,14 +1303,24 @@ export const getSubeventRegistrations =
       );
     }
     if (
-      registration.status ===
-      "attended"
+      Number(sessionNumber) >
+      registration.subevent.totalSessions
     ) {
-      return res.status(400).json({
-        message:
-          "Attendance already marked",
-      });
+      res.status(400);
+    
+      throw new Error(
+        "Invalid session number"
+      );
     }
+    // if (
+    //   registration.status ===
+    //   "attended"
+    // ) {
+    //   return res.status(400).json({
+    //     message:
+    //       "Attendance already marked",
+    //   });
+    // }
     // Get parent event
     // const event =
     //   await Event.findById(
@@ -1339,47 +1360,108 @@ export const getSubeventRegistrations =
     // }
 
     // Mark registration attended
-    registration.status =
-      "attended";
+    // registration.status =
+    //   "attended";
 
-    registration.attendedAt =
-      new Date();
+    // registration.attendedAt =
+    //   new Date();
 
-    registration.checkedInBy =
-      req.user._id;
+    // registration.checkedInBy =
+    //   req.user._id;
 
-    await registration.save();
-    await User.findByIdAndUpdate(
-      registration.participant,
-      {
-        $inc: { points: 5 },
-      }
-    );
+    // await registration.save();
+    // await User.findByIdAndUpdate(
+    //   registration.participant,
+    //   {
+    //     $inc: { points: 5 },
+    //   }
+    // );
     // Save attendance record
-    await Attendance.findOneAndUpdate(
-      {
-        registration:
-          registration._id,
-      },
-      {
-        registration:
-          registration._id,
-        markedBy:
-          req.user._id,
-        markedAt:
-          new Date(),
-      },
-      {
-        upsert: true,
-        new: true,
-      }
-    );
+    // await Attendance.findOneAndUpdate(
+    //   {
+    //     registration:
+    //       registration._id,
+    //   },
+    //   {
+    //     registration:
+    //       registration._id,
+    //     markedBy:
+    //       req.user._id,
+    //     markedAt:
+    //       new Date(),
+    //   },
+    //   {
+    //     upsert: true,
+    //     new: true,
+    //   }
+    // );
+    const existingAttendance =
+  await Attendance.findOne({
+    registration:
+      registration._id,
 
-    res.json({
-      message:
-        "Attendance marked",
-      registration,
-    });
+    sessionNumber,
+  });
+
+if (existingAttendance) {
+  return res.status(400).json({
+    message:
+      `Attendance already marked for Session ${sessionNumber}`,
+  });
+}
+    const attendance =
+    await Attendance.findOneAndUpdate(
+  {
+    registration:
+      registration._id,
+  
+    sessionNumber,
+  },
+  {
+    registration:
+      registration._id,
+  
+    sessionNumber,
+  
+    markedBy:
+      req.user._id,
+  
+    markedAt:
+      new Date(),
+  },
+  {
+    upsert: true,
+    new: true,
+  }
+  );
+  await User.findByIdAndUpdate(
+    registration.participant,
+    {
+      $inc: { points: 5 },
+    }
+  );
+  if (
+    registration.status === "payment_pending"
+  ) {
+    res.status(400);
+  
+    throw new Error(
+      "Payment pending"
+    );
+  }
+  registration.status = "attended";
+
+if (!registration.attendedAt) {
+  registration.attendedAt = new Date();
+}
+
+await registration.save();
+  res.json({
+    message:
+      `Attendance marked for Session ${sessionNumber}`,
+  
+    attendance,
+  });
   });
 // export const submitFeedback =
 //   asyncHandler(async (req, res) => {

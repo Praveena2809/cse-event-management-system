@@ -163,54 +163,47 @@ export const createMainEvent =
         parsedSubevents.length > 0
       ) {
         for (const sub of parsedSubevents) {
-        await Subevent.create({
-          event: event._id,
-
-          type: sub.type,
-          name: sub.name,
-          description:
-            sub.description,
-
-          venue:
-            sub.venue || null,
-
-          startAt:
-            sub.startAt,
-
-          endAt:
-            sub.endAt,
-
-          eligibility:
-            sub.eligibility,
-
-          maxParticipants:
-            Number(
-              sub.maxParticipants ||
-                0
+          await Subevent.create({
+            event: event._id,
+          
+            type: sub.type,
+            name: sub.name,
+            description: sub.description,
+          
+            venue: sub.venue || null,
+          
+            startAt: sub.startAt,
+            endAt: sub.endAt,
+          
+            eligibility: sub.eligibility,
+          
+            maxParticipants: Number(
+              sub.maxParticipants || 0
             ),
-
-          entryFee:
-            Number(
+          
+            entryFee: Number(
               sub.entryFee || 0
             ),
-
-          eventManager:
-            sub.eventManager,
-
-          managerPhone:
-            sub.managerPhone,
-
-          prizePool:
-            sub.prizePool,
-
-          createdBy:
-            req.user._id,
-
-          // important
-          status: "pending_review",
-          registrationsClosed:
-  false,
-        });
+          
+            eventManager: sub.eventManager,
+            managerPhone: sub.managerPhone,
+            prizePool: sub.prizePool,
+          
+            totalSessions:
+              Number(sub.totalSessions || 1),
+          
+            certificateSettings:
+              sub.certificateSettings || {
+                mode: "attendance_once",
+                minimumPercentage: 80,
+              },
+          
+            createdBy: req.user._id,
+          
+            status: "pending_review",
+          
+            registrationsClosed: false,
+          });
       }
     }
 

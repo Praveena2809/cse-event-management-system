@@ -20,11 +20,14 @@ export default function Register() {
     phone: "",
     email: "",
     password: "",
+    confirmPassword: "",
     collegeName: "",
-    role: "participant", // IMPORTANT
+    role: "participant",
   });
 
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onChange = (e) => {
     setForm((f) => ({
@@ -35,14 +38,20 @@ export default function Register() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
     setLoading(true);
 
     try {
-      // await register(form);
       await signup(form);
-      toast.success("Account created successfully!");
-
-      navigate("/dashboard/participant");
+    
+      toast.success(
+        "Account created. Please verify your email before logging in."
+      );
+    
+      navigate("/login/participant");
     } catch (err) {
       console.error(err);
 
@@ -189,23 +198,73 @@ export default function Register() {
           />
         </div>
 
-        {/* Password */}
         <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Password
-          </label>
+  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+    Password
+  </label>
 
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={onChange}
-            placeholder="Minimum 6 characters"
-            minLength={6}
-            className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-black placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-            required
-          />
-        </div>
+  <div className="relative">
+    <input
+      type={showPassword ? "text" : "password"}
+      name="password"
+      value={form.password}
+      onChange={onChange}
+      placeholder="Minimum 6 characters"
+      minLength={6}
+      className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 pr-12 text-black placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+      required
+    />
+
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+    >
+      {showPassword ? "🙈" : "👁"}
+    </button>
+  </div>
+</div>
+<div className="md:col-span-2">
+  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+    Confirm Password
+  </label>
+
+  <div className="relative">
+    <input
+      type={showConfirmPassword ? "text" : "password"}
+      name="confirmPassword"
+      value={form.confirmPassword}
+      onChange={onChange}
+      placeholder="Re-enter password"
+      className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 pr-12 text-black placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+      required
+    />
+
+    <button
+      type="button"
+      onClick={() =>
+        setShowConfirmPassword(!showConfirmPassword)
+      }
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+    >
+      {showConfirmPassword ? "🙈" : "👁"}
+    </button>
+  </div>
+
+  {form.confirmPassword && (
+    <p
+      className={`mt-2 text-sm ${
+        form.password === form.confirmPassword
+          ? "text-green-600"
+          : "text-red-600"
+      }`}
+    >
+      {form.password === form.confirmPassword
+        ? "✓ Passwords match"
+        : "✗ Passwords do not match"}
+    </p>
+  )}
+</div>
 
         <button
           type="submit"

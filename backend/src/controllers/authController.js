@@ -58,15 +58,19 @@ export const registerParticipant = asyncHandler(async (req, res) => {
   // Send verification email (non-blocking for beginners: if email not configured, app still works)
   try {
     const verifyUrl = buildClientUrl(`/verify-email?token=${emailVerificationToken}`);
+  
+    console.log("VERIFY URL:", verifyUrl);
+  
     await sendEmail({
       to: user.email,
       subject: "Verify your email - CSE Event System",
       html: `<p>Hello ${user.name},</p><p>Please verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
     });
+  
+    console.log("EMAIL SENT TO:", user.email);
   } catch (e) {
-    // Ignore email errors in dev to keep onboarding smooth
+    console.error("EMAIL ERROR:", e);
   }
-
   const token = signToken({ id: user._id, role: user.role });
   res.status(201).json({ user: okUser(user), token });
 });
@@ -93,6 +97,12 @@ export const login = asyncHandler(async (req, res) => {
   if (!match) {
     res.status(401);
     throw new Error("Invalid credentials");
+  }
+  if (!user.isEmailVerified) {
+    res.status(403);
+    throw new Error(
+      "Please verify your email before logging in. Check your inbox or resend the verification email."
+    );
   }
   if (role && user.role !== role) {
     res.status(403);

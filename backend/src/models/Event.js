@@ -217,6 +217,8 @@ const eventSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+   // Number of sessions/days for attendance tracking
+
 
     miscNotesForHod: {
       type: String,

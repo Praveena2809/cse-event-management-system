@@ -106,7 +106,27 @@ const subeventSchema =
         type: Number,
         default: 0,
       },
+// Certificate eligibility settings
+totalSessions: {
+  type: Number,
+  default: 1,
+},
 
+certificateSettings: {
+  mode: {
+    type: String,
+    enum: [
+      "attendance_once",
+      "attendance_percentage",
+    ],
+    default: "attendance_once",
+  },
+
+  minimumPercentage: {
+    type: Number,
+    default: 80,
+  },
+},
       eventManager: {
         type: String,
       },
