@@ -179,7 +179,7 @@ const [availabilityMap,
       venue: "",
       startAt: "",
       endAt: "",
-      eligibility: "All Years",
+      eligibility: ["1", "2", "3", "4"],
       maxParticipants: "",
       entryFee: "",
       eventManager: "",
@@ -210,7 +210,7 @@ certificateSettings: {
         venue: "",
         startAt: "",
         endAt: "",
-        eligibility: "All Years",
+        eligibility: ["1", "2", "3", "4"],
         maxParticipants: "",
         entryFee: "",
         eventManager: "",
@@ -920,46 +920,42 @@ fd.append(
   ) : null}
 </div>
 <div>
-  <label className="text-sm font-medium">
-    Eligibility
-  </label>
+ 
+  <div>
+ 
 
   <div>
   <label className="text-sm font-medium">
-    Eligibility
+    Eligible Years
   </label>
 
-  <select
-    value={s.eligibility || "All Years"}
-    onChange={(e) =>
-      updateSubevent(
-        index,
-        "eligibility",
-        e.target.value
-      )
-    }
-    className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-black dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-  >
-    <option value="All Years">
-      All Years
-    </option>
-
-    <option value="1st Year">
-      1st Year
-    </option>
-
-    <option value="2nd Year">
-      2nd Year
-    </option>
-
-    <option value="3rd Year">
-      3rd Year
-    </option>
-
-    <option value="4th Year">
-      4th Year
-    </option>
-  </select>
+  {["1", "2", "3", "4"].map((year) => (
+  <label key={year} className="flex gap-2">
+    <input
+      type="checkbox"
+      checked={s.eligibility?.includes(year)}
+      onChange={(e) => {
+        if (e.target.checked) {
+          updateSubevent(
+            index,
+            "eligibility",
+            [...(s.eligibility || []), year]
+          );
+        } else {
+          updateSubevent(
+            index,
+            "eligibility",
+            s.eligibility.filter(
+              (y) => y !== year
+            )
+          );
+        }
+      }}
+    />
+    Year {year}
+  </label>
+))}
+</div>
 </div>
 </div>
 <div>

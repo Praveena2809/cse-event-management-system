@@ -24,12 +24,19 @@ export default function MyEvents() {
     venue: "",
     startAt: "",
     endAt: "",
-    eligibility: "",
+    eligibility: "All Years",
     maxParticipants: "",
     entryFee: "",
     eventManager: "",
     managerPhone: "",
     prizePool: "",
+  
+    totalSessions: 1,
+  
+    certificateSettings: {
+      mode: "attendance_once",
+      minimumPercentage: 80,
+    },
   });
   const [subPoster, setSubPoster] = useState(null);
   const [availability, setAvailability] = useState(null);
@@ -193,112 +200,125 @@ const closeAttendance =
   }, []);
 
   const checkAvailability = async () => {
-    if (!subForm.venue || !subForm.startAt || !subForm.endAt) return;
+    if (!subForm.venue || !subForm.startAt || !subForm.endAt) {
+      return;
+    }
+  
     try {
       const { data } = await api.get(
-        `/venues/availability?venueId=${subForm.venue}&startAt=${encodeURIComponent(subForm.startAt)}&endAt=${encodeURIComponent(
-          subForm.endAt
-        )}`
+        `/venues/availability?venueId=${subForm.venue}&startAt=${encodeURIComponent(
+          subForm.startAt
+        )}&endAt=${encodeURIComponent(subForm.endAt)}`
       );
-      const checkEditAvailability =
-  async () => {
-    if (
-      !editingSubevent
-        ?.venue ||
-      !editingSubevent
-        ?.startAt ||
-      !editingSubevent
-        ?.endAt
-    )
-      return;
-
-    try {
-      const {
-        data,
-      } =
-        await api.get(
-          `/venues/availability?venueId=${editingSubevent.venue}&startAt=${encodeURIComponent(
-            editingSubevent.startAt
-          )}&endAt=${encodeURIComponent(
-            editingSubevent.endAt
-          )}`
-        );
-
-      setEditAvailability(
-        data
-      );
-    } catch (err) {
-      setEditAvailability(
-        {
-          error:
-            err
-              ?.response
-              ?.data
-              ?.message ||
-            "Failed",
-        }
-      );
-    }
-  };
+  
       setAvailability(data);
     } catch (err) {
-      setAvailability({ error: err?.response?.data?.message || "Failed" });
+      setAvailability({
+        error:
+          err?.response?.data?.message ||
+          "Failed to check venue",
+      });
     }
   };
-  const checkEditAvailability =
-  async () => {
-    if (
-      !editingSubevent
-        ?.venue ||
-      !editingSubevent
-        ?.startAt ||
-      !editingSubevent
-        ?.endAt
-    ) {
-      toast.error(
-        "Select venue, start and end time first"
-      );
-      return;
-    }
+  //     const checkEditAvailability =
+  // async () => {
+  //   if (
+  //     !editingSubevent
+  //       ?.venue ||
+  //     !editingSubevent
+  //       ?.startAt ||
+  //     !editingSubevent
+  //       ?.endAt
+  //   )
+  //     return;
 
-    try {
-      const {
-        data,
-      } =
-        await api.get(
-          `/venues/availability?venueId=${editingSubevent.venue}&startAt=${encodeURIComponent(
-            editingSubevent.startAt
-          )}&endAt=${encodeURIComponent(
-            editingSubevent.endAt
-          )}`
-        );
+  //   try {
+  //     const {
+  //       data,
+  //     } =
+  //       await api.get(
+  //         `/venues/availability?venueId=${editingSubevent.venue}&startAt=${encodeURIComponent(
+  //           editingSubevent.startAt
+  //         )}&endAt=${encodeURIComponent(
+  //           editingSubevent.endAt
+  //         )}`
+  //       );
 
-      setEditAvailability(
-        data
-      );
+  //     setEditAvailability(
+  //       data
+  //     );
+  //   } catch (err) {
+  //     setEditAvailability(
+  //       {
+  //         error:
+  //           err
+  //             ?.response
+  //             ?.data
+  //             ?.message ||
+  //           "Failed",
+  //       }
+  //     );
+  //   }
+  // };
+  //     setAvailability(data);
+  //   } catch (err) {
+  //     setAvailability({ error: err?.response?.data?.message || "Failed" });
+  //   }
+  // };
+  // const checkEditAvailability =
+  // async () => {
+  //   if (
+  //     !editingSubevent
+  //       ?.venue ||
+  //     !editingSubevent
+  //       ?.startAt ||
+  //     !editingSubevent
+  //       ?.endAt
+  //   ) {
+  //     toast.error(
+  //       "Select venue, start and end time first"
+  //     );
+  //     return;
+  //   }
 
-      if (
-        data
-          ?.conflicts
-          ?.length
-      ) {
-        toast.error(
-          "Venue conflict found"
-        );
-      } else {
-        toast.success(
-          "Venue available"
-        );
-      }
-    } catch (err) {
-      toast.error(
-        err?.response
-          ?.data
-          ?.message ||
-          "Failed to check venue"
-      );
-    }
-  };
+  //   try {
+  //     const {
+  //       data,
+  //     } =
+  //       await api.get(
+  //         `/venues/availability?venueId=${editingSubevent.venue}&startAt=${encodeURIComponent(
+  //           editingSubevent.startAt
+  //         )}&endAt=${encodeURIComponent(
+  //           editingSubevent.endAt
+  //         )}`
+  //       );
+
+  //     setEditAvailability(
+  //       data
+  //     );
+
+  //     if (
+  //       data
+  //         ?.conflicts
+  //         ?.length
+  //     ) {
+  //       toast.error(
+  //         "Venue conflict found"
+  //       );
+  //     } else {
+  //       toast.success(
+  //         "Venue available"
+  //       );
+  //     }
+  //   } catch (err) {
+  //     toast.error(
+  //       err?.response
+  //         ?.data
+  //         ?.message ||
+  //         "Failed to check venue"
+  //     );
+  //   }
+  // };
   const loadRegistrations = async (
     subeventId
   ) => {
@@ -371,7 +391,13 @@ const closeAttendance =
     if (!creatingFor) return;
     try {
       const fd = new FormData();
-      Object.entries(subForm).forEach(([k, v]) => fd.append(k, v));
+      Object.entries(subForm).forEach(([k, v]) => {
+        if (typeof v === "object") {
+          fd.append(k, JSON.stringify(v));
+        } else {
+          fd.append(k, v);
+        }
+      });
       if (subPoster) fd.append("poster", subPoster);
       await api.post(`/events/${creatingFor}/subevents`, fd, { headers: { "Content-Type": "multipart/form-data" } });
       toast.success("Subevent created (pending HOD approval)");
@@ -390,6 +416,12 @@ const closeAttendance =
         eventManager: "",
         managerPhone: "",
         prizePool: "",
+        totalSessions: 1,
+
+certificateSettings: {
+  mode: "attendance_once",
+  minimumPercentage: 80,
+},
       });
       setAvailability(null);
       await load();
@@ -699,7 +731,8 @@ const closeAttendance =
             <div className="md:col-span-2">
               <button
                 type="button"
-                onClick={checkAvailability}
+                // onClick={checkAvailability}
+                onClick={() => {}}
                 className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
               >
                 Check venue availability
@@ -776,7 +809,82 @@ const closeAttendance =
                 className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
               />
             </div>
+            <div>
+  <label className="text-sm font-medium">
+    Number of Sessions
+  </label>
 
+  <input
+    type="number"
+    min="1"
+    value={subForm.totalSessions}
+    onChange={(e) =>
+      setSubForm((f) => ({
+        ...f,
+        totalSessions: e.target.value,
+      }))
+    }
+    className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+  />
+</div>
+
+<div>
+  <label className="text-sm font-medium">
+    Certificate Rule
+  </label>
+
+  <select
+    value={subForm.certificateSettings.mode}
+    onChange={(e) =>
+      setSubForm((f) => ({
+        ...f,
+        certificateSettings: {
+          ...f.certificateSettings,
+          mode: e.target.value,
+        },
+      }))
+    }
+    className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+  >
+    <option value="attendance_once">
+      One Attendance Required
+    </option>
+
+    <option value="attendance_percentage">
+      Minimum Attendance Percentage
+    </option>
+  </select>
+</div>
+
+{subForm.certificateSettings.mode ===
+  "attendance_percentage" && (
+  <div>
+    <label className="text-sm font-medium">
+      Minimum Attendance %
+    </label>
+
+    <input
+      type="number"
+      min="1"
+      max="100"
+      value={
+        subForm.certificateSettings
+          .minimumPercentage
+      }
+      onChange={(e) =>
+        setSubForm((f) => ({
+          ...f,
+          certificateSettings: {
+            ...f.certificateSettings,
+            minimumPercentage:
+              e.target.value,
+          },
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+    />
+  </div>
+)}
             <button
               className="md:col-span-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
@@ -1172,9 +1280,7 @@ const closeAttendance =
   <div className="md:col-span-2">
     <button
       type="button"
-      onClick={
-        checkEditAvailability
-      }
+      onClick={() => {}}
       className="rounded-md border border-slate-500 px-4 py-2 text-white"
     >
       Check Venue Availability
@@ -1287,10 +1393,11 @@ const closeAttendance =
   </div>
 
   {/* PRIZE POOL */}
-  <div>
+  {/* <div>
     <label className="text-sm font-medium text-white">
       Prize Pool
     </label>
+    <div>
 
     <input
       value={
@@ -1305,7 +1412,24 @@ const closeAttendance =
       }
       className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
     />
-  </div>
+  </div> */}
+  {/* PRIZE POOL */}
+<div>
+  <label className="text-sm font-medium text-white">
+    Prize Pool
+  </label>
+
+  <input
+    value={editingSubevent.prizePool || ""}
+    onChange={(e) =>
+      setEditingSubevent((prev) => ({
+        ...prev,
+        prizePool: e.target.value,
+      }))
+    }
+    className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white"
+  />
+</div>
 
   {/* RESUBMIT */}
   <div className="md:col-span-2">
@@ -1319,179 +1443,8 @@ const closeAttendance =
     </button>
   </div>
 </div>
-  // <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
-  //   <div className="flex items-center justify-between">
-  //     <p className="font-semibold text-slate-900 dark:text-white">
-  //       Edit & Resubmit
-  //     </p>
-
-  //     <button
-  //       onClick={() =>
-  //         setEditingSubevent(
-  //           null
-  //         )
-  //       }
-  //     >
-  //       Close
-  //     </button>
-  //   </div>
-
-  //   <div className="mt-4 grid gap-4 md:grid-cols-2">
-
-  //     <div>
-  //       <label>
-  //         Subevent Name
-  //       </label>
-
-  //       <input
-  //         value={
-  //           editingSubevent.name
-  //         }
-  //         onChange={(e) =>
-  //           setEditingSubevent(
-  //             (
-  //               prev
-  //             ) => ({
-  //               ...prev,
-  //               name:
-  //                 e
-  //                   .target
-  //                   .value,
-  //             })
-  //           )
-  //         }
-  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
-  //       />
-  //     </div>
-
-  //     <div>
-  //       <label>
-  //         Venue
-  //       </label>
-
-  //       <select
-  //         value={
-  //           editingSubevent.venue
-  //         }
-  //         onChange={(e) =>
-  //           setEditingSubevent(
-  //             (
-  //               prev
-  //             ) => ({
-  //               ...prev,
-  //               venue:
-  //                 e
-  //                   .target
-  //                   .value,
-  //             })
-  //           )
-  //         }
-  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
-  //       >
-  //         <option value="">
-  //           Select venue
-  //         </option>
-
-  //         {venues.map(
-  //           (v) => (
-  //             <option
-  //               key={
-  //                 v._id
-  //               }
-  //               value={
-  //                 v._id
-  //               }
-  //             >
-  //               {
-  //                 v.name
-  //               }
-  //             </option>
-  //           )
-  //         )}
-  //       </select>
-  //     </div>
-
-  //     <div>
-  //       <label>
-  //         Start
-  //       </label>
-
-  //       <input
-  //         type="datetime-local"
-  //         value={
-  //           editingSubevent.startAt
-  //         }
-  //         onChange={(e) =>
-  //           setEditingSubevent(
-  //             (
-  //               prev
-  //             ) => ({
-  //               ...prev,
-  //               startAt:
-  //                 e
-  //                   .target
-  //                   .value,
-  //             })
-  //           )
-  //         }
-  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
-  //       />
-  //     </div>
-
-  //     <div>
-  //       <label>
-  //         End
-  //       </label>
-
-  //       <input
-  //         type="datetime-local"
-  //         value={
-  //           editingSubevent.endAt
-  //         }
-  //         onChange={(e) =>
-  //           setEditingSubevent(
-  //             (
-  //               prev
-  //             ) => ({
-  //               ...prev,
-  //               endAt:
-  //                 e
-  //                   .target
-  //                   .value,
-  //             })
-  //           )
-  //         }
-  //         className="mt-1 w-full rounded-md border px-3 py-2 text-black"
-  //       />
-  //     </div>
-
-  //     <div className="md:col-span-2">
-  //       <button
-  //         type="button"
-  //         onClick={
-  //           checkEditAvailability
-  //         }
-  //         className="rounded-md border px-4 py-2"
-  //       >
-  //         Check Venue
-  //       </button>
-  //     </div>
-
-  //     <div className="md:col-span-2">
-  //       <button
-  //         onClick={
-  //           resubmitSubevent
-  //         }
-  //         className="rounded-md bg-yellow-500 px-4 py-2 text-white"
-  //       >
-  //         Resubmit to
-  //         HOD
-  //       </button>
-  //     </div>
-  //   </div>
-  // </div>
-
 )}
+ 
 {/* Load Participants */}
 <button
   onClick={() =>

@@ -353,37 +353,33 @@ export const registerForSubevent =
     //
 // Eligibility Check
 //
+// Eligibility Check
+
 const participant =
-await User.findById(
-  req.user._id
-);
-
-const eligibility =
-subevent.eligibility ||
-"All Years";
-
-if (
-eligibility !==
-"All Years"
-) {
-const yearMap = {
-  "1st Year": "1",
-  "2nd Year": "2",
-  "3rd Year": "3",
-  "4th Year": "4",
-};
-
-if (
-  participant.year !==
-  yearMap[eligibility]
-) {
-  res.status(400);
-
-  throw new Error(
-    `Only ${eligibility} students can register for this event`
+  await User.findById(
+    req.user._id
   );
+
+if (
+  subevent.eligibility &&
+  subevent.eligibility.length > 0
+) {
+  const studentYear =
+    String(participant.year);
+
+  if (
+    !subevent.eligibility.includes(
+      studentYear
+    )
+  ) {
+    res.status(400);
+
+    throw new Error(
+      "You are not eligible for this event"
+    );
+  }
 }
-}
+
 
     // NEW: block registrations if coordinator closed it
     if (
