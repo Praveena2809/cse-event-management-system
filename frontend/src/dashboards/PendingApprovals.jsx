@@ -270,7 +270,45 @@ export default function PendingApprovals() {
           </p>
         </div> */}
 {/* EVENT DETAILS */}
+{proposal.event.posterUrl ? (
+  <img
+  src={`http://localhost:8000${proposal.event.posterUrl}`}
+    alt={proposal.event.name}
+    className="mb-4 h-64 w-full rounded-lg object-cover"
+  />
+) : (
+  <div className="mb-4 flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-slate-600">
+    No Event Poster Uploaded
+  </div>
+)}
+<div className="mb-4 rounded-lg bg-slate-800 p-4">
+  <h3 className="text-lg font-bold">
+    Proposal Package Summary
+  </h3>
 
+  <p>
+    Total Subevents:
+    {" "}
+    {proposal.subevents?.length || 0}
+  </p>
+
+  <p>
+    Expected Participants:
+    {" "}
+    {proposal.subevents?.reduce(
+      (sum, s) =>
+        sum +
+        (s.maxParticipants || 0),
+      0
+    )}
+  </p>
+
+  <p>
+    Coordinator:
+    {" "}
+    {proposal.event.createdBy?.name}
+  </p>
+</div>
 <div className="mb-6 rounded-lg border border-slate-700 p-4">
   <h2 className="text-2xl font-bold">
     {proposal.event.name}
@@ -281,6 +319,30 @@ export default function PendingApprovals() {
   </p>
 
   <div className="mt-4 grid gap-2 md:grid-cols-2 text-sm text-slate-300">
+  <p>
+  <strong>Total Capacity:</strong>{" "}
+  {proposal.subevents?.reduce(
+    (sum, s) =>
+      sum + (s.maxParticipants || 0),
+    0
+  )}
+</p>
+
+<p>
+  <strong>Total Prize Pool:</strong>{" "}
+  ₹
+  {proposal.subevents?.reduce(
+    (sum, s) =>
+      sum +
+      Number(s.prizePool || 0),
+    0
+  )}
+</p>
+<p className="mt-2 text-sm text-slate-400">
+  Phone: {
+    proposal.event.createdBy?.phone
+  }
+</p>
     <p>
       <strong>
         Event Type:
@@ -350,6 +412,41 @@ export default function PendingApprovals() {
     }
     )
   </div>
+  <div className="mt-4 rounded-lg bg-blue-950/30 p-3">
+  <p className="font-semibold">
+    Approval Checklist
+  </p>
+
+  <ul className="mt-2 list-disc pl-5 text-sm">
+    <li>
+      Event poster uploaded:
+      {" "}
+      {proposal.event.posterUrl
+        ? "✅"
+        : "❌"}
+    </li>
+
+    <li>
+      All subevents have venues:
+      {" "}
+      {proposal.subevents?.every(
+        (s) => s.venue
+      )
+        ? "✅"
+        : "❌"}
+    </li>
+
+    <li>
+      All subevents have managers:
+      {" "}
+      {proposal.subevents?.every(
+        (s) => s.eventManager
+      )
+        ? "✅"
+        : "❌"}
+    </li>
+  </ul>
+</div>
 </div>
         {/* SUBEVENTS */}
 
@@ -377,9 +474,29 @@ export default function PendingApprovals() {
                   {s.venue?.name ||
                     "N/A"}
                 </div> */}
-                <h4 className="text-lg font-bold">
-  {s.name}
-</h4>
+                <p className="text-red-400">
+  Poster URL from API: {String(s.posterUrl)}
+</p>
+ {s.posterUrl ? (
+  <img
+  src={`http://localhost:8000${s.posterUrl}`}
+    alt={s.name}
+    className="mb-3 h-48 w-full rounded-lg object-cover"
+  />
+) : (
+  <div className="mb-3 flex h-48 items-center justify-center rounded-lg border-2 border-dashed border-slate-600">
+    No Subevent Poster Uploaded
+  </div>
+)}
+                <div className="flex items-center justify-between">
+  <h4 className="text-lg font-bold">
+    {s.name}
+  </h4>
+
+  <span className="rounded-full bg-yellow-500/20 px-3 py-1 text-xs">
+    Pending Review
+  </span>
+</div>
 
 <p className="mt-1 text-sm text-slate-300">
   {s.description}
@@ -427,8 +544,9 @@ export default function PendingApprovals() {
     <strong>
       Eligibility:
     </strong>{" "}
-    {s.eligibility ||
-      "N/A"}
+    {Array.isArray(s.eligibility)
+  ? s.eligibility.join(", ")
+  : s.eligibility || "N/A"}
   </p>
 
   <p>
@@ -472,6 +590,26 @@ export default function PendingApprovals() {
     {s.prizePool ||
       "N/A"}
   </p>
+  <div className="rounded-lg border border-slate-700 p-3">
+  <p className="font-semibold">
+    Attendance & Certificate
+  </p>
+
+  <p>
+    Sessions:
+    {" "}
+    {s.totalSessions || 1}
+  </p>
+
+  <p>
+    Rule:
+    {" "}
+    {s.certificateSettings?.mode ===
+    "attendance_percentage"
+      ? `Minimum ${s.certificateSettings?.minimumPercentage}% attendance required`
+      : "At least one attendance required"}
+  </p>
+</div>
 </div>
 
                 {/* APPROVE / REVISION */}

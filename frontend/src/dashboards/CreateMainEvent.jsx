@@ -329,17 +329,25 @@ certificateSettings: {
         }
       });
       const cleanedSubevents =
-  subevents.map((s) => ({
-    ...s,
-    poster: null,
-  }));
-
-fd.append(
-  "subevents",
-  JSON.stringify(
-    cleanedSubevents
-  )
-);
+      subevents.map((s, index) => ({
+        ...s,
+        poster: s.poster
+          ? `subeventPoster-${index}`
+          : null,
+      }));
+    
+    fd.append(
+      "subevents",
+      JSON.stringify(cleanedSubevents)
+    );
+    subevents.forEach((s, index) => {
+      if (s.poster) {
+        fd.append(
+          `subeventPoster-${index}`,
+          s.poster
+        );
+      }
+    });
       // fd.append(
       //   "subevents",
       //   JSON.stringify(

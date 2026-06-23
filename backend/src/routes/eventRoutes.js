@@ -223,12 +223,8 @@ router.get(
 router.post(
   "/",
   protect,
-  requireRole(
-    "coordinator"
-  ),
-  upload.single(
-    "poster"
-  ),
+  requireRole("coordinator"),
+  upload.any(),
   createMainEvent
 );
 

@@ -106,7 +106,11 @@ export const createMainEvent =
         "name, description and date are required"
       );
     }
-
+    console.log("SUBEVENT FILE:", req.file);
+    console.log("SUBEVENT BODY:", req.body);
+  
+    console.log("FILES:", req.files);
+console.log("FILE:", req.file);
     let posterUrl;
 
     if (req.file?.path) {
@@ -162,14 +166,32 @@ export const createMainEvent =
         ) &&
         parsedSubevents.length > 0
       ) {
-        for (const sub of parsedSubevents) {
+        for (let i = 0; i < parsedSubevents.length; i++) {
+          const sub = parsedSubevents[i];
+          let subeventPosterUrl = "";
+
+const posterFile = req.files?.find(
+  (f) => f.fieldname === `subeventPoster-${i}`
+);
+
+if (posterFile?.path) {
+  const uploaded =
+    await uploadToCloudinaryIfConfigured(
+      posterFile.path,
+      "cse-events/subevent-posters"
+    );
+
+  subeventPosterUrl =
+    uploaded.url ||
+    `/uploads/${posterFile.filename}`;
+}
           await Subevent.create({
             event: event._id,
-          
             type: sub.type,
             name: sub.name,
             description: sub.description,
-          
+            posterUrl: subeventPosterUrl,
+
             venue: sub.venue || null,
           
             startAt: sub.startAt,
@@ -353,7 +375,8 @@ export const createSubevent = asyncHandler(async (req, res) => {
       throw new Error("Venue conflict: selected venue/time already booked");
     }
   }
-
+  console.log("REQ FILE:", req.file);
+  console.log("REQ BODY:", req.body);
   let posterUrl;
   if (req.file?.path) {
     const uploaded = await uploadToCloudinaryIfConfigured(req.file.path, "cse-events/subevent-posters");
