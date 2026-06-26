@@ -7,6 +7,7 @@ export default function MyEvents() {
   const [events, setEvents] = useState([]);
   const [editingEvent, setEditingEvent] =
   useState(null);
+  const [editPoster, setEditPoster] = useState(null);
   const [
     editingSubevent,
     setEditingSubevent,
@@ -57,22 +58,25 @@ export default function MyEvents() {
   //     ...subevent,
   //   });
   // };
-  const openEditSubevent =
-  (subevent) => {
+  const openEditSubevent = (subevent) => {
     setEditingSubevent({
       ...subevent,
-
-      venue:
-        subevent.venue?._id ||
-        subevent.venue,
-
-      startAt:
-        subevent.startAt
-          ?.slice(0, 16),
-
-      endAt:
-        subevent.endAt
-          ?.slice(0, 16),
+  
+      venue: subevent.venue?._id || subevent.venue,
+  
+      startAt: subevent.startAt?.slice(0, 16),
+  
+      endAt: subevent.endAt?.slice(0, 16),
+  
+      eligibility: subevent.eligibility || ["1", "2", "3", "4"],
+  
+      totalSessions: subevent.totalSessions || 1,
+  
+      certificateSettings:
+        subevent.certificateSettings || {
+          mode: "attendance_once",
+          minimumPercentage: 80,
+        },
     });
   };
   const openAttendance =
@@ -1012,6 +1016,7 @@ certificateSettings: {
     />
   </div>
 )}
+/////
             <button
               className="md:col-span-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
@@ -1223,150 +1228,298 @@ certificateSettings: {
   )}
 </div>}
 {editingSubevent?._id === sub._id && (
-  <div className="mt-4 space-y-3 rounded-lg border border-yellow-500 p-4">
+  <div className="mt-4 grid gap-4 md:grid-cols-2">
+ <div>
+ <label className="text-sm font-medium">Type</label>
+ <select
+   value={editingSubevent.type}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, type: e.target.value }))}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ >
+   <option value="workshop">Workshop</option>
+   <option value="competitive">Competitive</option>
+ </select>
+</div>
+<div>
+ <label className="text-sm font-medium">Venue</label>
+ <select
+   value={editingSubevent.venue}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, venue: e.target.value }))}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ >
+   <option value="">Select venue</option>
+   {venues.map((v) => (
+     <option key={v._id} value={v._id}>
+       {v.name}
+     </option>
+   ))}
+ </select>
+</div>
 
-    <input
-      type="text"
-      value={editingSubevent.name || ""}
-      onChange={(e) =>
-        setEditingSubevent({
-          ...editingSubevent,
-          name: e.target.value,
-        })
-      }
-      className="w-full rounded border p-2 text-black"
-      placeholder="Subevent Name"
-    />
+<div className="md:col-span-2">
+ <label className="text-sm font-medium">Subevent Name</label>
+ <input
+   value={editingSubevent.name}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, name: e.target.value }))}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+   required
+ />
+</div>
+<div className="md:col-span-2">
+ <label className="text-sm font-medium">Description</label>
+ <textarea
+   value={editingSubevent.description}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, description: e.target.value }))}
+   rows={3}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+   required
+ />
+</div>
+<div>
+ <label className="text-sm font-medium">Start</label>
+ <input
+   type="datetime-local"
+   value={editingSubevent.startAt}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, startAt: e.target.value }))}
+   onBlur={checkAvailability}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+   required
+ />
+</div>
+<div>
+ <label className="text-sm font-medium">End</label>
+ <input
+   type="datetime-local"
+   value={editingSubevent.endAt}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, endAt: e.target.value }))}
+   onBlur={checkAvailability}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+   required
+ />
+</div>
 
-    <textarea
-      value={editingSubevent.description || ""}
-      onChange={(e) =>
-        setEditingSubevent({
-          ...editingSubevent,
-          description: e.target.value,
-        })
-      }
-      className="w-full rounded border p-2 text-black"
-      placeholder="Description"
-    />
+<div className="md:col-span-2">
+ <button
+   type="button"
+   // onClick={checkAvailability}
+   onClick={() => {}}
+   className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
+ >
+   Check venue availability
+ </button>
+ {availability?.conflicts?.length ? (
+   <p className="mt-2 text-sm text-red-600">
+     Conflict! This slot is already booked. Try another venue/time.
+   </p>
+ ) : availability && !availability.error ? (
+   <p className="mt-2 text-sm text-emerald-600">No conflicts for selected venue.</p>
+ ) : null}
+ {availability?.suggestedAlternateVenues?.length ? (
+   <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+     Suggested alternate venues: {availability.suggestedAlternateVenues.map((v) => v.name).join(", ")}
+   </p>
+ ) : null}
+ {availability?.error ? <p className="mt-2 text-sm text-red-600">{availability.error}</p> : null}
+</div>
 
-    <input
-      type="datetime-local"
-      value={editingSubevent.startAt || ""}
-      onChange={(e) =>
-        setEditingSubevent({
-          ...editingSubevent,
-          startAt: e.target.value,
-        })
-      }
-      className="w-full rounded border p-2 text-black"
-    />
+<div>
+<div>
+<label className="text-sm font-medium">
+Eligibility
+</label>
 
-    <input
-      type="datetime-local"
-      value={editingSubevent.endAt || ""}
-      onChange={(e) =>
-        setEditingSubevent({
-          ...editingSubevent,
-          endAt: e.target.value,
-        })
-      }
-      className="w-full rounded border p-2 text-black"
-    />
-<select
-  value={editingSubevent.venue || ""}
-  onChange={(e) =>
-    setEditingSubevent({
-      ...editingSubevent,
-      venue: e.target.value,
-    })
-  }
-  className="w-full rounded border p-2 text-black"
+<div className="mt-2 space-y-2">
+{[
+"1",
+"2",
+"3",
+"4",
+].map((year) => (
+<label
+key={year}
+className="flex items-center gap-2"
 >
-  <option value="">Select Venue</option>
+<input
+type="checkbox"
+checked={editingSubevent.eligibility.includes(
+year
+)}
+onChange={(e) => {
+if (e.target.checked) {
+  setEditingSubevent((f) => ({
+   ...f,
+   eligibility: [
+     ...f.eligibility,
+     year,
+   ],
+ }));
+} else {
+  setEditingSubevent((f) => ({
+   ...f,
+   eligibility:
+     f.eligibility.filter(
+       (y) => y !== year
+     ),
+ }));
+}
+}}
+/>
 
-  {venues.map((v) => (
-    <option key={v._id} value={v._id}>
-      {v.name}
-    </option>
-  ))}
-</select>
-<input
-  type="number"
-  value={editingSubevent.maxParticipants || ""}
-  onChange={(e) =>
-    setEditingSubevent({
-      ...editingSubevent,
-      maxParticipants: e.target.value,
-    })
-  }
-  className="w-full rounded border p-2 text-black"
-  placeholder="Max Participants"
-/>
-<input
-  type="number"
-  value={editingSubevent.entryFee || ""}
-  onChange={(e) =>
-    setEditingSubevent({
-      ...editingSubevent,
-      entryFee: e.target.value,
-    })
-  }
-  className="w-full rounded border p-2 text-black"
-  placeholder="Entry Fee"
-/>
-<input
-  type="text"
-  value={editingSubevent.eventManager || ""}
-  onChange={(e) =>
-    setEditingSubevent({
-      ...editingSubevent,
-      eventManager: e.target.value,
-    })
-  }
-  className="w-full rounded border p-2 text-black"
-  placeholder="Event Manager"
-/>
-<input
-  type="text"
-  value={editingSubevent.managerPhone || ""}
-  onChange={(e) =>
-    setEditingSubevent({
-      ...editingSubevent,
-      managerPhone: e.target.value,
-    })
-  }
-  className="w-full rounded border p-2 text-black"
-  placeholder="Manager Phone"
-/>
-<input
-  type="number"
-  value={editingSubevent.prizePool || ""}
-  onChange={(e) =>
-    setEditingSubevent({
-      ...editingSubevent,
+{year} Year
+</label>
+))}
+</div>
+</div>
+</div>
+<div>
+ <label className="text-sm font-medium">Max participants</label>
+ <input
+   value={editingSubevent.maxParticipants}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, maxParticipants: e.target.value }))}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ />
+</div>
+<div>
+ <label className="text-sm font-medium">Entry fee (₹)</label>
+ <input
+   value={editingSubevent.entryFee}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, entryFee: e.target.value }))}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ />
+</div>
+<div>
+ <label className="text-sm font-medium">Poster</label>
+ <input
+   type="file"
+   accept="image/*"
+   onChange={(e) => setEditPoster(e.target.files?.[0] || null)}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ />
+</div>
+<div>
+ <label className="text-sm font-medium">Event manager</label>
+ <input
+   value={editingSubevent.eventManager}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, eventManager: e.target.value }))}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ />
+</div>
+<div>
+ <label className="text-sm font-medium">Manager phone</label>
+ <input
+   value={editingSubevent.managerPhone}
+   onChange={(e) => setEditingSubevent((f) => ({ ...f, managerPhone: e.target.value }))}
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ />
+</div>
+<div className="md:col-span-2">
+ <label className="text-sm font-medium">Prize pool</label>
+ <input
+   value={editingSubevent.prizePool}
+   onChange={(e) =>
+    setEditingSubevent((f) => ({
+      ...f,
       prizePool: e.target.value,
-    })
+    }))
   }
-  className="w-full rounded border p-2 text-black"
-  placeholder="Prize Pool"
+   className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+ />
+</div>
+<div>
+<label className="text-sm font-medium">
+Number of Sessions
+</label>
+
+<input
+type="number"
+min="1"
+value={editingSubevent.totalSessions}
+onChange={(e) =>
+  setEditingSubevent((f) => ({
+    ...f,
+    totalSessions: e.target.value,
+  }))
+}
+className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
 />
-    <button
-      onClick={resubmitSubevent}
-      className="rounded bg-green-600 px-4 py-2 text-white"
-    >
-      Submit Revision
-    </button>
+</div>
 
-    <button
-      onClick={() => setEditingSubevent(null)}
-      className="ml-2 rounded bg-gray-600 px-4 py-2 text-white"
-    >
-      Cancel
-    </button>
+<div>
+<label className="text-sm font-medium">
+Certificate Rule
+</label>
 
+<select
+value={editingSubevent.certificateSettings.mode}
+onChange={(e) =>
+  setEditingSubevent((f) => ({
+...f,
+certificateSettings: {
+...f.certificateSettings,
+mode: e.target.value,
+},
+}))
+}
+className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+>
+<option value="attendance_once">
+One Attendance Required
+</option>
+
+<option value="attendance_percentage">
+Minimum Attendance Percentage
+</option>
+</select>
+</div>
+
+{editingSubevent.certificateSettings.mode ===
+"attendance_percentage" && (
+  <div>
+    <label className="text-sm font-medium">
+      Minimum Attendance %
+    </label>
+
+    <input
+      type="number"
+      min="1"
+      max="100"
+      value={editingSubevent.certificateSettings.minimumPercentage}
+      onChange={(e) =>
+        setEditingSubevent((f) => ({
+          ...f,
+          certificateSettings: {
+            ...f.certificateSettings,
+            minimumPercentage: e.target.value,
+          },
+        }))
+      }
+      className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+    />
   </div>
 )}
+
+<div className="md:col-span-2 flex gap-3 mt-4">
+  <button
+    type="button"
+    onClick={resubmitSubevent}
+    className="rounded-md bg-yellow-600 px-4 py-2 text-white"
+  >
+    Resubmit Subevent
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setEditingSubevent(null)}
+    className="rounded-md bg-gray-600 px-4 py-2 text-white"
+  >
+    Cancel
+  </button>
+</div>
+
+</div>
+)}
+
+
 <div className="mt-4 flex flex-wrap items-center gap-3">
 
 {/* View Feedback */}
