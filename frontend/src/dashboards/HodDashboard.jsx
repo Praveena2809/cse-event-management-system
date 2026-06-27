@@ -45,6 +45,10 @@ export default function HodDashboard() {
           label:
             "Announcements",
         },
+        {
+          to: "/dashboard/hod/leaderboard",
+          label: "🏆 Coordinator Leaderboard",
+      },
       ]}
     />
   );

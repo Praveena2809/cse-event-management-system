@@ -688,16 +688,14 @@ export const listPendingApprovals =
   asyncHandler(async (req, res) => {
 
     // pending event proposals
-    const events =
-      await Event.find({
-        status: {
-          $in: [
-            "pending_review",
-            "revision_requested",
-            "cancel_requested",
-          ],
-        },
-      })
+    const events = await Event.find({
+      status: {
+        $in: [
+          "pending_review",
+          "revision_requested",
+        ],
+      },
+    })
         .populate(
           "createdBy",
           "name email"
@@ -741,7 +739,11 @@ export const listPendingApprovals =
         subevents,
       });
     }
-
+    const cancellationRequests = await Event.find({
+      status: "cancel_requested",
+    })
+    .populate("createdBy", "name email phone")
+    .sort({ createdAt: -1 });
     // separately fetch
     // later-added subevents
     const pendingSubevents =
@@ -758,13 +760,13 @@ export const listPendingApprovals =
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
 
-    res.json({
-      proposals:
-        proposalPackages,
-
-      pendingSubevents,
-    });
+      res.json({
+        proposals: proposalPackages,
+        pendingSubevents,
+        cancellationRequests,
+      });
   });
+  /////
 export const approveEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id);
   if (!event) {
@@ -1256,7 +1258,11 @@ export const requestCancellation =
       reason;
 
     await event.save();
-
+    console.log("================================");
+console.log("Saved event status:", event.status);
+console.log("Event ID:", event._id);
+console.log("================================");
+    console.log("Saved event status:", event.status);
     res.json({
       message:
         "Cancellation request sent to HOD",

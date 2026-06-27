@@ -152,10 +152,9 @@ export default function Leaderboard() {
     async () => {
       try {
         const { data } =
-          await axios.get(
-            "http://localhost:8000/api/leaderboard"
-          );
-
+        await axios.get(
+          "http://localhost:8000/api/leaderboard/participants"
+        );
         setLeaders(data);
       } catch (error) {
         console.log(error);

@@ -7,10 +7,10 @@ export default function PendingApprovals() {
   //   events: [],
   //   subevents: [],
   // });
-  const [data, setData] =
-  useState({
+  const [data, setData] = useState({
     proposals: [],
     pendingSubevents: [],
+    cancellationRequests: [],
   });
 
   const [reason, setReason] =
@@ -38,12 +38,9 @@ export default function PendingApprovals() {
     //     [],
     // });
     setData({
-      proposals:
-        data.proposals || [],
-    
-      pendingSubevents:
-        data.pendingSubevents ||
-        [],
+      proposals: data.proposals || [],
+      pendingSubevents: data.pendingSubevents || [],
+      cancellationRequests: data.cancellationRequests || [],
     });
   };
 
@@ -507,6 +504,45 @@ export default function PendingApprovals() {
     </li>
   </ul>
 </div>
+</div>
+<div className="space-y-3">
+  <p className="font-semibold text-slate-900 dark:text-white">
+    Cancellation Requests
+  </p>
+
+  {(data.cancellationRequests || []).map((event) => (
+    <div
+      key={event._id}
+      className="rounded-xl border border-red-300 bg-white p-5 dark:border-red-700 dark:bg-slate-950"
+    >
+      <h3 className="text-xl font-bold">
+        {event.name}
+      </h3>
+
+      <p className="mt-2">
+        <strong>Coordinator:</strong>{" "}
+        {event.createdBy?.name}
+      </p>
+
+      <p className="mt-2">
+        <strong>Reason:</strong>{" "}
+        {event.cancelReason}
+      </p>
+
+      <div className="mt-4 flex gap-3">
+        <button
+          onClick={() => approveCancel(event._id)}
+          className="rounded bg-red-600 px-4 py-2 text-white"
+        >
+          Approve Cancellation
+        </button>
+      </div>
+    </div>
+  ))}
+
+  {!data.cancellationRequests?.length && (
+    <p>No cancellation requests.</p>
+  )}
 </div>
         {/* SUBEVENTS */}
 

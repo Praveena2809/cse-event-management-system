@@ -1,5 +1,4 @@
 
-
 import { useEffect, useState } from "react";
 import {
   BrowserRouter,
@@ -7,7 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-
+import CoordinatorLeaderboard from "./pages/CoordinatorLeaderboard";
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CoordinatorFeedbacks
@@ -268,6 +267,12 @@ export default function App() {
   }
 />
 <Route
+  path="leaderboard"
+  element={
+    <CoordinatorLeaderboard />
+  }
+/>
+<Route
   path="attendance"
   element={<CoordinatorAttendance />}
 />
@@ -384,8 +389,15 @@ export default function App() {
         <HodAnnouncements />
       }
     />
+    <Route
+  path="leaderboard"
+  element={
+    <CoordinatorLeaderboard />
+  }
+/>
   </Route>
 </Route>
+
            {/* Admin */}
 <Route
   element={

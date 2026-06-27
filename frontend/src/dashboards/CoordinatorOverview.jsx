@@ -24,7 +24,7 @@ export default function CoordinatorOverview() {
       );
     })();
   }, []);
-
+  
   const stats =
     useMemo(() => {
       const total =
@@ -111,7 +111,7 @@ export default function CoordinatorOverview() {
         <p className="font-semibold text-slate-900 dark:text-white">
           Coordinator Guide
         </p>
-
+ 
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
           Create main
           events and

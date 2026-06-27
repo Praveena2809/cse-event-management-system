@@ -49,6 +49,10 @@ export default function CoordinatorDashboard() {
             "/dashboard/coordinator/announcements",
           label:
             "Announcements",
+        },
+        {
+          to: "/dashboard/coordinator/leaderboard",
+          label: "🏆 Leaderboard",
         }
 
         
