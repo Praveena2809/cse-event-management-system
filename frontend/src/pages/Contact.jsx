@@ -9,7 +9,7 @@ export default function Contact() {
         <p className="font-semibold text-slate-900 dark:text-white">Department of CSE</p>
         <p className="text-sm text-slate-600 dark:text-slate-300">Anna University affiliated college</p>
         <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Email: cse-events@college.edu</p>
-        <p className="text-sm text-slate-600 dark:text-slate-300">Phone: +91 90000 00000</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">Phone: +91 90000 00001</p>
       </div>
     </div>
   );

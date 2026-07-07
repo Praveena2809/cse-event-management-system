@@ -11,7 +11,7 @@ export default function Footer() {
         <div>
           <p className="font-semibold text-slate-900 dark:text-white">Contact</p>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">cse-events@college.edu</p>
-          <p className="text-sm text-slate-600 dark:text-slate-300">+91 90000 00000</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">+91 90000 00001</p>
         </div>
         <div>
           <p className="font-semibold text-slate-900 dark:text-white">Social</p>
