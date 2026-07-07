@@ -8,6 +8,7 @@ export default function About() {
       </p>
       <p>
         It supports role-based access for Participants, Coordinators, HOD, and System Admin with separate dashboards.
+        Your Vision seamlessly delivered.
       </p>
     </div>
   );
