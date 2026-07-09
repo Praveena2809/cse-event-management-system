@@ -168,3 +168,8 @@ backend/
 - Support tickets, backups, and detailed PDF reports can be added as additional modules.
 - For production, consider using password reset links instead of emailing passwords.
 
+## Team Members
+- Praveena Raju
+- Sharal Arasu Maniyarasu
+- Nivedha Sri 
+
