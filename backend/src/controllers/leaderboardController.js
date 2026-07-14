@@ -11,6 +11,7 @@ async (req, res) => {
     const leaderboard =
       await User.find({
         role: "participant",
+        collegeName: "College of Engineering, Guindy, Anna University"
       })
         .sort({
           points: -1,

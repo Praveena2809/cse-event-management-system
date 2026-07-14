@@ -321,6 +321,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const { role } = useParams();
+  console.log("ROLE =", role);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -493,20 +494,18 @@ export default function Login() {
         </button>
       </form>
 
-      {/* Participant signup */}
-      {role ===
-        "participant" && (
-        <div className="text-center text-sm text-slate-600 dark:text-slate-300">
-          Don’t have an
-          account?{" "}
-          <Link
-            to="/register"
-            className="font-medium text-indigo-600 hover:underline"
-          >
-            Sign Up
-          </Link>
-        </div>
-      )}
+     {/* Student signup */}
+{(role === "participant" || role === "student") && (
+  <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-300">
+    Don't have an account?{" "}
+    <Link
+      to="/register"
+      className="font-medium text-indigo-600 hover:underline"
+    >
+      Click here to Sign Up
+    </Link>
+  </div>
+)}
     </div>
   );
 }

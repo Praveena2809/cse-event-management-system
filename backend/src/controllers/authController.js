@@ -6,7 +6,7 @@ import { signToken } from "../utils/token.js";
 import { sendEmail } from "../utils/email.js";
 
 const buildClientUrl = (path = "/") => {
-  const base = process.env.CLIENT_URL || "http://localhost:5173";
+  const base = process.env.CLIENT_URL || "http://localhost:5175";
   return `${base}${path}`;
 };
 
@@ -32,6 +32,11 @@ export const registerParticipant = asyncHandler(async (req, res) => {
 
   const { name, email, password, registerNumber, year, department, phone, collegeName } = req.body;
 
+  if (!collegeName || collegeName.trim() === "") {
+    res.status(400);
+    throw new Error("College name is required");
+  }
+
   const exists = await User.findOne({ email });
   if (exists) {
     res.status(400);
@@ -50,7 +55,7 @@ export const registerParticipant = asyncHandler(async (req, res) => {
     year,
     department,
     phone,
-    collegeName,
+    collegeName: collegeName.trim(),
     emailVerificationToken,
     emailVerificationExpires,
   });

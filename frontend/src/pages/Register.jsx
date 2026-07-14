@@ -27,7 +27,9 @@ export default function Register() {
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [collegeOption, setCollegeOption] = useState("");
+  const [customCollege, setCustomCollege] = useState("");
 
   const onChange = (e) => {
     setForm((f) => ({
@@ -42,10 +44,30 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
       toast.error("Passwords do not match");
       return;
     }
+
+    if (!collegeOption) {
+      toast.error("Please select a college option");
+      return;
+    }
+
+    const finalCollegeName = collegeOption === "College of Engineering, Guindy, Anna University"
+      ? "College of Engineering, Guindy, Anna University"
+      : customCollege.trim();
+
+    if (!finalCollegeName) {
+      toast.error("Please enter your college name");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await signup(form);
+      const payload = {
+        ...form,
+        collegeName: finalCollegeName,
+      };
+
+      await signup(payload);
     
       toast.success(
         "Account created. Please verify your email before logging in."
@@ -182,21 +204,45 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
           />
         </div>
 
-        {/* College Name */}
+        {/* College */}
         <div className="md:col-span-2">
           <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            College Name (For External Participants)
+            College
           </label>
 
-          <input
-            type="text"
-            name="collegeName"
-            value={form.collegeName}
-            onChange={onChange}
-            placeholder="Enter college name"
-            className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-black placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-          />
+          <select
+            name="collegeOption"
+            value={collegeOption}
+            onChange={(e) => setCollegeOption(e.target.value)}
+            className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            required
+          >
+            <option value="">Select College</option>
+            <option value="College of Engineering, Guindy, Anna University">
+              College of Engineering, Guindy, Anna University
+            </option>
+            <option value="Other">Other</option>
+          </select>
         </div>
+
+        {/* Custom College Input */}
+        {collegeOption === "Other" && (
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Enter College Name
+            </label>
+
+            <input
+              type="text"
+              name="customCollege"
+              value={customCollege}
+              onChange={(e) => setCustomCollege(e.target.value)}
+              placeholder="Enter college name"
+              className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-black placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              required
+            />
+          </div>
+        )}
 
         <div className="md:col-span-2">
   <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
